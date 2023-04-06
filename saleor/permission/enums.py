@@ -82,6 +82,7 @@ class SitePermissions(BasePermissionEnum):
     MANAGE_SETTINGS = "site.manage_settings"
     MANAGE_TRANSLATIONS = "site.manage_translations"
 
+from ..plugins.grigoprint.permissions import GrigoprintPermissions
 
 PERMISSIONS_ENUMS = [
     AccountPermissions,
@@ -100,6 +101,9 @@ PERMISSIONS_ENUMS = [
     ProductTypePermissions,
     ShippingPermissions,
     SitePermissions,
+
+    # grigoprint
+    GrigoprintPermissions,
 ]
 
 

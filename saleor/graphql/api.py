@@ -29,6 +29,10 @@ from .warehouse.schema import StockQueries, WarehouseMutations, WarehouseQueries
 from .webhook.schema import WebhookMutations, WebhookQueries
 from .webhook.subscription_types import WEBHOOK_TYPES_MAP, Subscription
 
+#grigoprint
+from ..plugins.grigoprint.schema import GrigoprintQueries, GrigoprintMutations
+
+
 API_PATH = SimpleLazyObject(lambda: reverse("api"))
 
 
@@ -55,6 +59,9 @@ class Query(
     TranslationQueries,
     WarehouseQueries,
     WebhookQueries,
+
+    #grigoprint
+    GrigoprintQueries,
 ):
     pass
 
@@ -83,6 +90,9 @@ class Mutation(
     TaxMutations,
     WarehouseMutations,
     WebhookMutations,
+
+    # grigoprint
+    GrigoprintMutations,
 ):
     pass
 
