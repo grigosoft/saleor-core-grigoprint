@@ -256,6 +256,9 @@ INSTALLED_APPS = [
     "django_countries",
     "django_filters",
     "phonenumber_field",
+
+    #grigoprint
+    "saleor.plugins.grigoprint.accountExtra",
 ]
 
 ENABLE_DJANGO_EXTENSIONS = get_bool_from_env("ENABLE_DJANGO_EXTENSIONS", False)
@@ -716,6 +719,9 @@ BUILTIN_PLUGINS = [
     "saleor.plugins.admin_email.plugin.AdminEmailPlugin",
     "saleor.plugins.sendgrid.plugin.SendgridEmailPlugin",
     "saleor.plugins.openid_connect.plugin.OpenIDConnectPlugin",
+
+    # grigoprint
+    "saleor.plugins.grigoprint.plugin.GrigoprintPlugin",
 ]
 
 # Plugin discovery
