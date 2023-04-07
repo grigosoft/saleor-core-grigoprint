@@ -32,7 +32,7 @@ class Contatto(ModelObjectType[models.Contatto]):
     user = graphene.Field(User, required=True)
     email = graphene.String()
     denominazione = graphene.String()
-    phone = graphene.String()
+    telefono = graphene.String()
     uso = TipoContattoEnum()
 
     class Meta:
