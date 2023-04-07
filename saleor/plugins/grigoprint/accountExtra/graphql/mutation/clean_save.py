@@ -52,27 +52,19 @@ def accerta_cliente_del_rappresentante_or_error(rappresentante:Optional["User"],
         )
     return
 
-# def save_contatto(user:"User", cleaned_data_contatto) -> Optional[Contatto]:
-#     if cleaned_data_contatto:
-#         print(user)
-#         print(user.extra)
-#         contatto = user.extra.contatti.create(
-#             user_extra = user.extra,
-#             denominazione = cleaned_data_contatto["denominazione"],
-#             email = cleaned_data_contatto["email"],
-#             telefono = cleaned_data_contatto["telefono"],
-#             uso = cleaned_data_contatto["uso"],
-#         )
-    #     return contatto
-    # return None
+def clean_contatto(user:"User", cleaned_input, data):
     
-# def save_contatti(user:"User", cleaned_data_contatti):
-#     if cleaned_data_contatti:
-#         for cleaned_data_contatto in cleaned_data_contatti:
-#             save_contatto(user=user, cleaned_data_contatto=cleaned_data_contatto)
-
-def clean_contatto(user:"User", cleaned_input, data_contatto):
-    pass
+    # TODO controllo permessi da rappresentante
+    print("TODO logica permessi rappresentante-cliente")
+    # if not instance.has_perm(AccountPermissions.MANAGE_USERS):
+    #     rappresentante = info.context.user
+    #     if not rappresentante:
+    #         raise ValidationError({
+    #             "user": ValidationError(
+    #                 "le App non posso accedere",
+    #                 code=AccountErrorCode.INVALID.value,
+    #             )})
+    #     clean_save.accerta_cliente_del_rappresentante_or_error(rappresentante, user)
 
 # def clean_contatti(user:"User", cleaned_input, data_contatti):
 #     for data_contatto in data_contatti:

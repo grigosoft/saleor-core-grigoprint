@@ -1,5 +1,6 @@
 import graphene
 from django.db.models import Q
+from saleor.graphql.core.types.common import AccountError
 
 from saleor.graphql.core.types.filter_input import FilterInputObjectType
 
@@ -38,7 +39,10 @@ from . import type
 def resolve_user_con_rappresentante(info, id=None, email=None, external_reference=None):
     saleor_resolver = resolve_user(info, id, email, external_reference)
     if not isinstance(saleor_resolver, PermissionDenied):
-        return saleor_resolver
+        if isUserExtra(saleor_resolver):
+            return saleor_resolver.extra
+        else:
+            raise AccountError("l'untente selezionato non ha l'extra")
     # se ha dato errore vedo se ha i permessi come rappresentante
     requester = info.context.user
     if requester:
@@ -53,7 +57,11 @@ def resolve_user_con_rappresentante(info, id=None, email=None, external_referenc
             if requester.has_perm( GrigoprintPermissions.IS_RAPPRESENTANTE ):
                 
                 filter_kwargs["rappresentante"] = requester_extra.rappresentante
-                return models.User.objects.customers().filter(**filter_kwargs).first()
+                user = models.User.objects.customers().filter(**filter_kwargs).first()
+                if isUserExtra(user):
+                    return user.extra
+                else:
+                    raise AccountError("l'untente selezionato non ha l'extra")
         
     return PermissionDenied(
         permissions=[

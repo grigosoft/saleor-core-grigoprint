@@ -197,7 +197,7 @@ def inserisci_dati_user(usr:models.UserExtra, row):
             country = nazione, #'"Nazione"',
             street_address_1 = row[21], #'"Indirizzo"',
             postal_code = row[22], #'"Cap"',
-            city_area = row[23], #'"Prov"',
+            country_area = row[23], #'"Prov"',
             city = row[24], #'"Citta"',
             )
             usr.user.addresses.add(fatturazione)
