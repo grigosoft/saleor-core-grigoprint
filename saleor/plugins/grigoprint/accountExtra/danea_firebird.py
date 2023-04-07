@@ -209,6 +209,7 @@ def inserisci_dati_user(usr:models.UserExtra, row):
                                                   uso = models.TipoContatto.GENERICO,
                                                   telefono = cellulare,
                                                   )
+        print("aggiungo contatto ", cellulare, " a ",usr.denominazione)
         usr.contatti.add(contatto)
         
 
