@@ -10,8 +10,8 @@ from .. import type
 
 
 class IvaInput(graphene.InputObjectType):
-    denominazione = graphene.String()
-    valore = graphene.Decimal()
+    nome = graphene.String()
+    valore = graphene.Float()
     info = graphene.String()
 
 class IvaCrea(ModelMutation):
@@ -57,8 +57,8 @@ class IvaCancella(ModelDeleteMutation):
         
 
 class ListinoInput(graphene.InputObjectType):
-    denominazione = graphene.String()
-    ricarico = graphene.Decimal()
+    nome = graphene.String()
+    ricarico = graphene.Float()
     info = graphene.String()
 
 class ListinoCrea(ModelMutation):

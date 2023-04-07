@@ -62,23 +62,29 @@ class ContattoCountableConnection(CountableConnection):
         node = Contatto
 
 class Listino(ModelObjectType[models.Listino]):
-    denominazione = graphene.String()
+    nome = graphene.String()
+    ricarico = graphene.Float()
+    info = graphene.String()
+
     class Meta:
         description = "Listino"
         model = models.Listino
     @staticmethod
-    def resolve_denominazione(root: models.Listino, _info, **_kwargs):
-        return root.denominazione
+    def resolve_nome(root: models.Listino, _info, **_kwargs):
+        return root.nome
+    
 @federated_entity("denominazione")
 class Iva(ModelObjectType[models.Iva]):
-    denominazione = graphene.String()
+    nome = graphene.String()
+    valore = graphene.Float()
+    info = graphene.String()
 
     class Meta:
         description = "Iva"
         model = models.Iva
     @staticmethod
-    def resolve_denominazione(root: models.Iva, _info, **_kwargs):
-        return root.denominazione
+    def resolve_nome(root: models.Iva, _info, **_kwargs):
+        return root.nome
 
 
 class UserExtra(ModelObjectType[models.UserExtra]):
@@ -105,7 +111,7 @@ class UserExtra(ModelObjectType[models.UserExtra]):
     rif_amministrazione = graphene.String()
     split_payment = graphene.Boolean()
 
-
+    coordinate_bancarie = graphene.String()
     iva = graphene.Field(Iva, description="iva di default di questo cliente")
     porto = TipoPortoEnum()
     vettore = TipoVettoreEnum()

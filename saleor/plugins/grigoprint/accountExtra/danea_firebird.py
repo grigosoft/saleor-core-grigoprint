@@ -152,16 +152,15 @@ def inserisci_dati_user(usr:models.UserExtra, row):
     # usr.piva = row[3], #'"PartitaIva"',
     usr.denominazione = row[4] #'"Nome"',
     
-    # if row[5]:
-    #     usr.tel = row[5] #'"Tel"',
-    # else:
-    #     usr.tel = ""
-    
-    # if row[6]:
-    #     usr.cell = row[6] #'"Cell"',
-    # else:
-    #     usr.cell = ""
-        
+    telefono_azienda = row[5]
+    cellulare = row[6]
+    if not telefono_azienda:
+        if row[6]:
+            telefono_azienda = row[6]
+        else:
+            telefono_azienda = ""
+        cellulare = None
+
         #  = row[7], #'"Fax"',
 #    usr.iva = row[8] #'"CodIvaDefault"',
     usr.pec = row[10] #'"Pec"',
@@ -190,6 +189,7 @@ def inserisci_dati_user(usr:models.UserExtra, row):
             usr.user.default_billing_address.country_area = row[23] #'"Prov"',
             usr.user.default_billing_address.city_area = ""
             usr.user.default_billing_address.city = row[24] #'"Citta"',
+            usr.user.default_billing_address.phone = telefono_azienda
             if not usr.user.default_billing_address in usr.user.addresses.all():
                 usr.user.addresses.add(usr.user.default_billing_address)
         else: # creo indirizzo di fatturazione
@@ -199,9 +199,18 @@ def inserisci_dati_user(usr:models.UserExtra, row):
             postal_code = row[22], #'"Cap"',
             country_area = row[23], #'"Prov"',
             city = row[24], #'"Citta"',
+            phone = telefono_azienda,
             )
             usr.user.addresses.add(fatturazione)
             usr.user.default_billing_address = fatturazione
+
+    if cellulare:
+        contatto = models.Contatto.objects.create(user_extra = usr,
+                                                  uso = models.TipoContatto.GENERICO,
+                                                  telefono = cellulare,
+                                                  )
+        usr.contatti.add(contatto)
+        
 
     if (not usr.piva) and usr.cf:
         usr.tipo_utente = TipoUtente.PRIVATO

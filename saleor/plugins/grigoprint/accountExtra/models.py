@@ -1,6 +1,6 @@
 
 from django.db import models
-from django.db.models import Q, Exists, OuterRef
+from django.db.models import Q, Exists, OuterRef, UniqueConstraint
 
 from saleor.order.models import Order
 
@@ -10,11 +10,11 @@ from .enum import TipoUtente, TipoContatto,TipoPorto,TipoVettore
 
 
 class Iva(models.Model):
-    denominazione = models.CharField(max_length=256, blank=False,null=True, unique=True)
+    nome = models.CharField(max_length=256, blank=False,null=True, unique=True)
     valore = models.FloatField()
     info = models.TextField(blank=True, default="")
 class Listino(models.Model):
-    denominazione = models.CharField(max_length=256, blank=False,null=False, unique=True)
+    nome = models.CharField(max_length=256, blank=False,null=False, unique=True)
     ricarico = models.FloatField(default=0)
     info = models.TextField(blank=True, default="")
 
@@ -85,7 +85,9 @@ class ContattoManager(models.Manager):
     pass
 class Contatto(models.Model):
     objects = ContattoManager()
-
+    
+    UniqueConstraint(fields=['user_extra', 'email', 'telefono'], name='unique_contatto')
+    
     user_extra = models.ForeignKey(UserExtra, related_name="contatti", on_delete=models.CASCADE,null=False, blank=False)
     email = models.EmailField(unique=False, db_index=True)
     denominazione = models.CharField(max_length=256, blank=True)
