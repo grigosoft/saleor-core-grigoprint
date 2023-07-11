@@ -40,7 +40,7 @@ class UserExtraManager(models.Manager["UserExtra"]):
 
 class UserExtra(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="extra", primary_key=True)
-    objects = UserExtraManager() # override del "userManager"
+    objects = UserExtraManager() # "userManager"
     
     denominazione = models.TextField(null=True, blank=True)
     id_danea = models.TextField(null=True, blank=True, unique=True)
@@ -65,7 +65,7 @@ class UserExtra(models.Model):
     sdi = models.TextField(null=True, blank=True)
     #Pubblica amministrazione
     rif_ammin = models.TextField(null=True, blank=True)
-    split_payment = models.BooleanField(null=True,default=False)
+    split_payment = models.BooleanField(default=False)
 
     iva = models.ForeignKey(Iva, null=True,blank=True, on_delete=models.SET_NULL)
     porto = models.CharField(null=True, blank=True, max_length=3,

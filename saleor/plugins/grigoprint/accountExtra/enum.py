@@ -34,14 +34,12 @@ class TipoUtente:
     PRIVATO = "P"
     PUBBLICA_AMMINISTRAZIONE = "PA"
     AGENZIA = "R"
-    DIPENDENTE = "D"
 
     CHOICES = [
         (AZIENDA, "Azienda"),
         (PRIVATO, "Privato"),
         (PUBBLICA_AMMINISTRAZIONE, "Pubblica Amministrazione"),
         (AGENZIA, "Agenzia Pubblicitaria"),
-        (DIPENDENTE, "Dipendente"),
     ]
 
 class TipoContatto:

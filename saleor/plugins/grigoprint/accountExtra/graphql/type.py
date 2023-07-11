@@ -41,6 +41,7 @@ class Contatto(ModelObjectType[models.Contatto]):
         model = models.Contatto
         convert_choices_to_enum = ["uso",]
 
+   
     @staticmethod
     def resolve_user(root: models.Contatto, _info, **_kwargs):
         return root.user_extra.user
@@ -61,7 +62,7 @@ class ContattoCountableConnection(CountableConnection):
     class Meta:
         node = Contatto
 
-class Listino(ModelObjectType[models.Listino]):
+class Listino(graphene.ObjectType):
     nome = graphene.String()
     ricarico = graphene.Float()
     info = graphene.String()
@@ -69,12 +70,9 @@ class Listino(ModelObjectType[models.Listino]):
     class Meta:
         description = "Listino"
         model = models.Listino
-    @staticmethod
-    def resolve_nome(root: models.Listino, _info, **_kwargs):
-        return root.nome
     
 @federated_entity("denominazione")
-class Iva(ModelObjectType[models.Iva]):
+class Iva(graphene.ObjectType):
     nome = graphene.String()
     valore = graphene.Float()
     info = graphene.String()
@@ -82,13 +80,13 @@ class Iva(ModelObjectType[models.Iva]):
     class Meta:
         description = "Iva"
         model = models.Iva
-    @staticmethod
-    def resolve_nome(root: models.Iva, _info, **_kwargs):
-        return root.nome
 
 
 class UserExtra(ModelObjectType[models.UserExtra]):
+    id = graphene.GlobalID(required=True, description="ID dell'oggetto User di saleor")
+    
     user = graphene.Field(User, description="Collegamento ad oggetto User di saleor")
+    
     email = graphene.String(description="collegamento diretto ad oggetto User.email di saleor")
     denominazione = graphene.String()
     id_danea = PermissionsField(graphene.String, permissions=[AccountPermissions.MANAGE_USERS, AccountPermissions.MANAGE_STAFF])
@@ -98,7 +96,7 @@ class UserExtra(ModelObjectType[models.UserExtra]):
     # cell = graphene.String()
     # si potrebbe continuare con altri campi dell'indirizzo
 
-    is_rappresentatnte = PermissionsField(graphene.Boolean, permissions=[AccountPermissions.MANAGE_USERS, AccountPermissions.MANAGE_STAFF])
+    is_rappresentante = PermissionsField(graphene.Boolean, permissions=[AccountPermissions.MANAGE_USERS, AccountPermissions.MANAGE_STAFF])
     rappresentante = graphene.Field(User, description="Rappresentante assegnato a questo utente/cliente")
     commissione = PermissionsField(graphene.Float, permissions=[AccountPermissions.MANAGE_USERS, AccountPermissions.MANAGE_STAFF, GrigoprintPermissions.IS_RAPPRESENTANTE])
 
@@ -108,7 +106,7 @@ class UserExtra(ModelObjectType[models.UserExtra]):
     pec = graphene.String()
     sdi = graphene.String(description="Codice destinatario per fatturazione elettronica: SDI o pec")
     # pubblica amministrazione
-    rif_amministrazione = graphene.String()
+    rif_ammin = graphene.String()
     split_payment = graphene.Boolean()
 
     coordinate_bancarie = graphene.String()
@@ -128,6 +126,10 @@ class UserExtra(ModelObjectType[models.UserExtra]):
         model = models.User
         convert_choices_to_enum = ["porto","vettore","tipo_cliente"]
 
+    @staticmethod
+    def resolve_id(root: models.UserExtra, _info, **_kwargs):
+        return graphene.Node.to_global_id("User", root.user.pk)
+    
     @staticmethod
     def resolve_user(root: models.UserExtra, _info, **_kwargs):
         return root.user
@@ -194,7 +196,6 @@ class UserExtra(ModelObjectType[models.UserExtra]):
     @staticmethod
     def resolve_contatti(root: models.UserExtra, _info, **_kwargs):
         return models.Contatto.objects.filter(user_extra=root)
- # type: ignore    
     
     # @staticmethod
     # def resolve_ferie(root: models.UserExtra, _info, **_kwargs):

@@ -169,7 +169,7 @@ class AccountQueries(graphene.ObjectType):
         name = "aliquoteIva"
     )
     listini = PermissionsField(
-        type.Listino,
+        graphene.List(type.Listino),
         description="listini disponibili",
         name = "listini",
         permissions=[AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS],
