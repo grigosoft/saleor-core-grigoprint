@@ -210,7 +210,7 @@ def inserisci_dati_user(usr:models.UserExtra, row):
                                                   telefono = cellulare,
                                                   )
         print("aggiungo contatto ", cellulare, " a ",usr.denominazione)
-        usr.contatti.add(contatto)
+        # usr.contatti.add(contatto)
         
 
     if (not usr.piva) and usr.cf:

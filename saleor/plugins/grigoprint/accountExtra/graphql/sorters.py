@@ -8,10 +8,10 @@ class UserExtraSortField(graphene.Enum):
     DENOMINAZIONE = ["denominazione", "pk"]
     RAPPRESENTANTE = ["rappresentante", "denominazione", "pk"]
     LISTINO = ["listino", "denominazione", "pk"]
-    SCONTO = ["sconto", "denominazione", "pk"]
+    SCONTO = ["sconto", "denominazione", "pk"] #?
     EMAIL = ["user__email"]
     ORDER_COUNT = ["order_count", "email"]
-    PROVINCIA = ["default_billing_address__city_area","default_billing_address__city","denominazione","pk"]
+    PROVINCIA = ["user__default_billing_address__city_area","user__default_billing_address__city","denominazione","pk"]
 
     @property
     def description(self):
