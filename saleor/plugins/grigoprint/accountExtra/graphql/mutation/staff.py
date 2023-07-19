@@ -49,7 +49,7 @@ class AssegnaRappresentante(BaseMutation):
     class Arguments:
         id = graphene.ID(description="Id Utente da aggiornare")
         input = AssegnaRappresentanteInput(
-            description="Fields necessari ad assegnare un rappresentante.", required=True
+            description="Fields necessari da assegnare un rappresentante.", required=True
         )
     class Meta:
         description = "Assegna rappresentante ad un utente"
@@ -83,23 +83,26 @@ class ClienteExtraInput(AssegnaRappresentanteInput, AccountExtraBaseInput):
     aggiungi_contatti = NonNullList(ContattoInput, description="Contatti da aggiungere al cliente")
 
 class ClienteCreaInput(CustomerInput):
-    extra = ClienteExtraInput()
+    extra = ClienteExtraInput(required=True)
 
 class ClienteCrea(CustomerCreate):
+    # user = graphene.Field(
+    #     type.User, description="A userExtra instance"
+    # )
+    user_extra = graphene.Field(
+        type.UserExtra, description="A userExtra instance"
+    )
     class Arguments:
         input = ClienteCreaInput(
             description="Fields required to create a staff user.", required=True
         )
 
     class Meta:
-        description = (
-            "Creates a new staff user. "
-            "Apps are not allowed to perform this mutation."
-        )
+        description = ("Crea un nuovo cliente ")
         exclude = ["password","is_rappresentante","commissione"]
         model = models.User
         object_type = type.User
-        permissions = (AccountPermissions.MANAGE_STAFF,) # TODO permessi rappresentante
+        permissions = (AccountPermissions.MANAGE_USERS,) # TODO permessi rappresentante
         error_type_class = StaffError
         error_type_field = "staff_errors"
 
@@ -114,15 +117,31 @@ class ClienteCrea(CustomerCreate):
         return cleaned_input
 
     @classmethod
-    def _save_m2m(cls, info: ResolveInfo, instance, cleaned_data):
+    def _save_extra(cls, info: ResolveInfo, instance, cleaned_data):
         cleaned_data_extra = cleaned_data["extra"]
         with traced_atomic_transaction():
-            super()._save_m2m(info, instance, cleaned_data_extra)
-            clean_save.accerta_user_extra_or_error(instance)
+            clean_save.controllaOCreaUserExtra(instance)
             # salvo le informazioni in userExtra
             clean_save.save_user_extra(instance, cleaned_data_extra)
             clean_save.save_assegna_rappresentante(instance, cleaned_data_extra)
-            
+    
+    @classmethod
+    def perform_mutation(cls, _root, info: ResolveInfo, /, **data):
+        instance = cls.get_instance(info, **data)
+        data = data.get("input")
+        cleaned_input = cls.clean_input(info, instance, data)
+        metadata_list = cleaned_input.pop("metadata", None)
+        private_metadata_list = cleaned_input.pop("private_metadata", None)
+        instance = cls.construct_instance(instance, cleaned_input)
+
+        cls.validate_and_update_metadata(instance, metadata_list, private_metadata_list)
+        cls.clean_instance(info, instance)
+        cls.save(info, instance, cleaned_input)
+        cls._save_m2m(info, instance, cleaned_input)
+        cls._save_extra(info, instance, cleaned_input) # tutto uguale all'originale, tranne questo
+        cls.post_save_action(info, instance, cleaned_input)
+        return ClienteCrea(user_extra = instance.extra)
+
 class StaffRappresentanteInput(graphene.InputObjectType):
     is_rappresentante = graphene.Boolean(description="se è un rappresentante", default = False)
     commissione = graphene.Float()
@@ -161,7 +180,7 @@ class StaffCrea(StaffCreate):
         clean_save.clean_user_extra(instance, cleaned_input_extra, data)
         clean_save.clean_assegna_rappresentante(cls, info, instance, cleaned_input_extra)
         clean_save.clean_is_rappresentante(instance, cleaned_input_extra,data)
-        cleaned_input["tipo_utente"] = TipoUtente.DIPENDENTE
+        # cleaned_input["tipo_utente"] = TipoUtente.PRIVATO
         return cleaned_input
         
     @classmethod
@@ -248,10 +267,7 @@ def clean_account_extra_input(cls, info, instance, data, cleaned_input):
 
 
 
-class ContattoInput2(graphene.InputObjectType):
-    denominazione = graphene.String(description="nome completo")
-    email = graphene.String(description="The email address of the user.")
-    phone = graphene.String(description="telefono dell'utente")
+
 class ClienteInput2(UserCreateInput):
     denominazione = graphene.String(description="nome completo")
     id_danea = graphene.String(description="id cliene nel programma DaneaEsayfatt")
@@ -365,7 +381,6 @@ class StaffCrea2(StaffCreate):
             data.pop(BILLING_ADDRESS_FIELD, None)
         cleaned_input = super().clean_input(info, instance, data)
         cleaned_input["is_staff"] = True
-        cleaned_input["tipo_cliente"] = models.TipoUtente.DIPENDENTE
         return cleaned_input
 class StaffAggiorna(StaffUpdate):
     class Arguments:
@@ -387,55 +402,6 @@ class StaffAggiorna(StaffUpdate):
         cleaned_input = super().clean_input(info, instance, data)
         return clean_account_extra_input(cls, info, instance, data, cleaned_input)
 
-class ContattoCrea(ModelMutation):
-    user = graphene.Field(
-        type.UserExtra, description="A user instance for which the contacts was created."
-    )
-    class Arguments:
-        user_id = graphene.ID(description="id dell'utente", required=True)
-        input = ContattoInput(
-            description="Fields required to create un contatto.", required=True
-        )
-    class Meta:
-        description = "Creates a new contatto."
-        permissions = (AccountPermissions.MANAGE_USERS,)
-        error_type_class = AccountError
-        error_type_field = "account_errors"
-        model = models.Contatto
-        object_type = type.Contatto
-
-    @classmethod
-    def perform_mutation(cls, root, info, **data):
-        user_id = data["user_id"]
-        user = cls.get_node_or_error(info, user_id, field="user_id", only_type=type.UserExtra)
-        response = super().perform_mutation(root, info, **data)
-        if not response.errors:
-            user.contatti.add(response.contatto)
-            response.user = user
-        return response
-    # @classmethod
-    # def clean_input(cls, info, instance, data):
-    #     cleaned_input = super().clean_input(info, instance, data)
-    #     utente_input = getattr(cls.Arguments, "utente")
-    #     if utente_input:
-    #         utente_da_modificare = models.UserExtra.objects.filter(id=utente_input)
-    #         if utente_da_modificare:
-    #             cleaned_input["utente"] = utente_da_modificare
-    #             return clean_account_extra_input(cls, info, instance, data, cleaned_input)
-    #     raise ValidationError("fornisci un id utenteExtra valido")
-class ContattoAggiorna(ModelMutation):
-    class Arguments:
-        id = graphene.ID(description="ID of a contatto to update.", required=True)
-        input = ContattoInput(
-            description="Fields required to update a contatto.", required=True
-        )
-    class Meta:
-        model = models.Contatto
-        object_type = type.Contatto
-        description = "Updates an existing Contatto."
-        permissions = (AccountPermissions.MANAGE_USERS,)
-        error_type_class = AccountError
-        error_type_field = "account_errors"
 
 # class IndirizzoCrea(ModelMutation):
 #     user = graphene.Field(

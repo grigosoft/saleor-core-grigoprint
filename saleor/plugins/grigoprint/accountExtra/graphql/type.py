@@ -1,5 +1,7 @@
 import graphene
+from graphene_django import DjangoObjectType
 from saleor.graphql.core.fields import PermissionsField
+from saleor.graphql.core.types.common import NonNullList
 
 from saleor.permission.enums import AccountPermissions, GrigoprintPermissions
 
@@ -27,20 +29,16 @@ TipoVettoreEnum = to_enum(models.TipoVettore)
 TipoPortoEnum = to_enum(models.TipoPorto)
 TipoUtenteEnum = to_enum(models.TipoUtente)
 
-class Contatto(ModelObjectType[models.Contatto]):
+class Contatto(DjangoObjectType):
     user_extra = graphene.Field("saleor.plugins.grigoprint.accountExtra.graphql.type.UserExtra", required=True)
-    user = graphene.Field(User, required=True)
-    email = graphene.String()
-    denominazione = graphene.String()
-    telefono = graphene.String()
-    uso = TipoContattoEnum()
+    user = graphene.Field(User)
 
     class Meta:
         description = "Represents user contacts"
         interfaces = [graphene.relay.Node,]
         model = models.Contatto
         convert_choices_to_enum = ["uso",]
-
+        fields = ("email","denominazione","telefono","uso")
    
     @staticmethod
     def resolve_user(root: models.Contatto, _info, **_kwargs):
@@ -48,38 +46,24 @@ class Contatto(ModelObjectType[models.Contatto]):
     @staticmethod
     def resolve_userExtra(root: models.Contatto, _info, **_kwargs):
         return root.user_extra
-    @staticmethod
-    def resolve_email(root: models.Contatto, _info, **_kwargs):
-        return root.email
-    @staticmethod
-    def resolve_telefono(root: models.Contatto, _info, **_kwargs):
-        return root.telefono
-    @staticmethod
-    def resolve_uso(root: models.Contatto, _info, **_kwargs):
-        return root.uso
 
 class ContattoCountableConnection(CountableConnection):
     class Meta:
         node = Contatto
 
-class Listino(graphene.ObjectType):
-    nome = graphene.String()
-    ricarico = graphene.Float()
-    info = graphene.String()
-
+class Listino(DjangoObjectType):
     class Meta:
         description = "Listino"
+        interfaces = [graphene.relay.Node,]
         model = models.Listino
+        fields = ("id","nome","ricarico","info") #"__all__"
     
-@federated_entity("denominazione")
-class Iva(graphene.ObjectType):
-    nome = graphene.String()
-    valore = graphene.Float()
-    info = graphene.String()
-
+class Iva(DjangoObjectType):
     class Meta:
         description = "Iva"
+        interfaces = [graphene.relay.Node,]
         model = models.Iva
+        fields = ("id","nome","valore","info") #"__all__"
 
 
 class UserExtra(ModelObjectType[models.UserExtra]):
@@ -117,12 +101,12 @@ class UserExtra(ModelObjectType[models.UserExtra]):
     listino = graphene.Field(Listino, description="listino di questo cliente")
     sconto = graphene.Float()
 
-    contatti = graphene.List(Contatto, description="List of all user's contacts.")
+    contatti = NonNullList(Contatto, description="List of all user's contacts.")
     # ferie = graphene.List(Ferie, description="ferie richieste di un cliente")
     # notifiche = graphene.List(Notifica, description="notifiche inviate da un cliente")
     class Meta:
         description = "Represents user data."
-        interfaces = [graphene.relay.Node, ObjectWithMetadata]
+        interfaces = [graphene.relay.Node,]
         model = models.User
         convert_choices_to_enum = ["porto","vettore","tipo_cliente"]
 

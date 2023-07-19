@@ -3,6 +3,8 @@ from django.db.models import Q
 from saleor.graphql.core.types.common import AccountError
 
 from saleor.graphql.core.types.filter_input import FilterInputObjectType
+from saleor.graphql.utils import get_user_or_app_from_context
+from saleor.permission.utils import has_one_of_permissions
 
 from .....graphql.core import ResolveInfo
 from .....core.exceptions import PermissionDenied
@@ -91,8 +93,6 @@ def resolve_users_con_rappresentante(info, ids=None, emails=None):
         qs = requester_extra.clienti
 
     elif requester.id:
-        # If user has no access to all users, we can only return themselves, but
-        # only if they are authenticated and one of requested users
         qs = models.User.objects.filter(id=requester.id)
     else:
         qs = models.User.objects.none()
@@ -163,6 +163,28 @@ class AccountQueries(graphene.ObjectType):
     #     description="Lista completa dei clienti di un rappresentante",
     #     name = "clienti_rappresentante"
     # )
+    contatto = PermissionsField(
+        type.Contatto,
+        id=graphene.Argument(graphene.ID, description="ID del contatto."),
+        description="Contatto singolo da ID",
+        name = "contatto",
+        permissions=[AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS],
+    )
+    contatti_utente = FilterConnectionField(
+        type.ContattoCountableConnection,
+        id=graphene.Argument(graphene.ID, description="ID of the user."),
+        description="lista dei contatti di un cliente da ID cliente",
+        name = "contatti_utente",
+        permissions=[AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS],
+    )
+    # contatti = graphene.List(
+    #     type.Contatto,
+    #     description="lista dei contatti di un cliente",
+    #     name = "contatti_utente",
+    #     filter=ContattiFilterInput(description="Filtering options for contatti."),
+    #     sort_by=ContattiSortingInput(description="Sort contatti."),
+    #     permissions=[AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS],
+    # )
     aliquote_iva = graphene.List(
         type.Iva,
         description="lista delle aliquote iva disponibili",
@@ -213,6 +235,43 @@ class AccountQueries(graphene.ObjectType):
     #     else:
     #         return PermissionDenied("Questo utente non è un rappresentante")
    
+    @staticmethod
+    def resolve_contatto(
+        _root, info: ResolveInfo, *, id=None
+    ):
+        validate_one_of_args_is_in_query(
+            "id", id
+        )
+        requester = get_user_or_app_from_context(info.context)
+        if requester:
+            filter_kwargs = {}
+            if id:
+                _model, filter_kwargs["pk"] = from_global_id_or_error(id, type.Contatto)
+            if has_one_of_permissions(requester,
+                [AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS, OrderPermissions.MANAGE_ORDERS]
+            ):
+                return models.Contatto.objects.filter(**filter_kwargs).first()
+            # if requester.has_perm(AccountPermissions.MANAGE_STAFF):
+            #     return models.User.objects.staff().filter(**filter_kwargs).first()
+            # if has_one_of_permissions(
+            #     requester, [AccountPermissions.MANAGE_USERS, OrderPermissions.MANAGE_ORDERS]
+            # ):
+            #     return models.User.objects.customers().filter(**filter_kwargs).first()
+        return PermissionDenied(
+            permissions=[
+                AccountPermissions.MANAGE_STAFF,
+                AccountPermissions.MANAGE_USERS,
+                OrderPermissions.MANAGE_ORDERS,
+            ]
+        )
+    @staticmethod
+    def resolve_contatti(
+        _root, info: ResolveInfo, *, id=None
+    ):
+        validate_one_of_args_is_in_query(
+            "id", id
+        )
+        return #resolve_user_con_rappresentante(info, id, email, external_reference)
     @staff_member_or_app_required
     def resolve_aliquote_iva(self, info, **kwargs):
         return models.Iva.objects.all()

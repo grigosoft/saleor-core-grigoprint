@@ -5,8 +5,8 @@ from saleor.graphql.account.types import User
 from django.core.exceptions import ValidationError
 
 from saleor.plugins.grigoprint.accountExtra.enum import TipoUtente
-from ...util import isUserExtra
-from ...models import Contatto, Listino
+from ...util import isUserExtra, controllaOCreaUserExtra
+from ...models import Contatto, Iva, Listino
 from .... import util
 
 
@@ -78,7 +78,7 @@ def clean_is_rappresentante(user:"User", cleaned_input, data):
 def save_is_rappresentante(user:"User", cleaned_data):
     user.extra.commissione = cleaned_data.get("is_rappresentante", False)
     user.extra.commissione = cleaned_data.get("commissione", 0)
-    user.extra.save(only_fields=["is_rappresentante","commissione"])
+    user.extra.save()#only_fields=["is_rappresentante","commissione"])
 
 def clean_assegna_rappresentante(cls, info, user:"User", cleaned_input):
     rappresentante_id = cleaned_input.get("rappresentante_id", None)
@@ -91,7 +91,7 @@ def save_assegna_rappresentante(user:"User", cleaned_data):
     rappresentante = cleaned_data.get("rappresentante", None)
     if rappresentante:
         user.extra.rappresentante = rappresentante
-        user.extra.save(only_fields=["rappresentante"])
+        user.extra.save()#only_fields=["rappresentante"])
 
 def save_user_extra_base(user:"User", cleaned_data):
     """crea le informazioni base dell'UserExtra"""
@@ -114,20 +114,20 @@ def save_user_extra(user:"User", cleaned_data):
     user_extra = user.extra
     user_extra.id_danea = cleaned_data.get("id_danea", "")
     user_extra.tipo_utente = cleaned_data.get("tipo_utente", TipoUtente.AZIENDA)
-    user_extra.iva = cleaned_data.get("iva", "")
+    user_extra.iva = cleaned_data.get("iva", None)
     user_extra.porto = cleaned_data.get("porto", "")
     user_extra.vettore = cleaned_data.get("vettore", "")
     user_extra.pagamento = cleaned_data.get("pagamento", "")
-    user_extra.listino = cleaned_data.get("listino", "")
+    user_extra.listino = cleaned_data.get("listino", None)
     user_extra.sconto = cleaned_data.get("sconto", 0)
     user_extra.save()
 
 
-def clean_user_extra_base(user:"User", cleaned_input, data):
+def clean_user_extra_base(user:"User", cleaned_input_extra, data):
     pass
 
-def clean_user_extra(user:"User", cleaned_input, data):
-    clean_user_extra_base(user,cleaned_input,data)
+def clean_user_extra(user:"User", cleaned_input_extra, data):
+    clean_user_extra_base(user,cleaned_input_extra,data)
     # formattazione fatta a front-end
     # email = cleaned_input.get("email")
     # if email:
@@ -138,13 +138,12 @@ def clean_user_extra(user:"User", cleaned_input, data):
     # last_name = cleaned_input.get("last_name")
     # if last_name:
     #     cleaned_input["last_name"] = util.str_strip_title(last_name)
-    cleaned_input_extra = cleaned_input["extra"]
     listino_id = cleaned_input_extra.get("listino_id", None)
     if listino_id:
-        cleaned_input_extra["listino"] = Listino.objects.filter(id=listino_id)
+        cleaned_input_extra["listino"] = Listino.objects.filter(pk=listino_id).first()
     iva_id = cleaned_input_extra.get("iva_id", None)
-    if listino_id:
-        cleaned_input_extra["listino"] = Listino.objects.filter(id=iva_id)
+    if iva_id:
+        cleaned_input_extra["iva"] = Iva.objects.filter(pk=iva_id).first()
 
     # TODO aggiunta automatica al gruppo permessi dei rappresentanti
     # is_rappresentante = cleaned_input.get("is_rappresentante")
