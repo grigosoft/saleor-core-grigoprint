@@ -81,10 +81,10 @@ class ContattoAggiorna(ModelMutation):
 
 class ContattoCancella(ModelDeleteMutation):
     class Arguments:
-        contatto_id = graphene.ID(description="id del contatto da modificare", required=True)
+        id = graphene.ID(description="id del contatto da cancellare", required=True)
         
     class Meta:
-        description = "Creates a new contatto."
+        description = "Cancella un contatto."
         permissions = (AccountPermissions.MANAGE_USERS,GrigoprintPermissions.IS_RAPPRESENTANTE)
         error_type_class = AccountError
         error_type_field = "account_errors"

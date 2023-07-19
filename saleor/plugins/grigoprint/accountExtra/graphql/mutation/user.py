@@ -7,12 +7,12 @@ from .. import type
 
 
 class AccountExtraBaseInput(graphene.InputObjectType):
-    denominazione = graphene.String()
+    denominazione = graphene.String(required=True)
     
     piva = graphene.String()
     cf = graphene.String()
     pec = graphene.String()
     sdi = graphene.String(description="Codice destinatario per fatturazione elettronica: SDI o pec")
     # pubblica amministrazione
-    rif_amministrazione = graphene.String()
+    rif_ammin = graphene.String()
     split_payment = graphene.Boolean()
