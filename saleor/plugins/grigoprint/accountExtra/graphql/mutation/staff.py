@@ -82,8 +82,8 @@ class ClienteExtraInput(AssegnaRappresentanteInput, AccountExtraBaseInput):
 
     aggiungi_contatti = NonNullList(ContattoInput, description="Contatti da aggiungere al cliente")
 
-class ClienteCreaInput(CustomerInput):
-    extra = ClienteExtraInput(required=True)
+class ClienteInput(CustomerInput):
+    extra = ClienteExtraInput(required=True, description="Campi per informazioni aggiuntive")
 
 class ClienteCrea(CustomerCreate):
     # user = graphene.Field(
@@ -93,8 +93,8 @@ class ClienteCrea(CustomerCreate):
         type.UserExtra, description="A userExtra instance"
     )
     class Arguments:
-        input = ClienteCreaInput(
-            description="Fields required to create a staff user.", required=True
+        input = ClienteInput(
+            description="Campi per creare un utente CLIENTE", required=True
         )
 
     class Meta:
@@ -103,8 +103,8 @@ class ClienteCrea(CustomerCreate):
         model = models.User
         object_type = type.User
         permissions = (AccountPermissions.MANAGE_USERS,) # TODO permessi rappresentante
-        error_type_class = StaffError
-        error_type_field = "staff_errors"
+        error_type_class = AccountError
+        error_type_field = "account_errors"
 
     @classmethod
     def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
@@ -113,17 +113,16 @@ class ClienteCrea(CustomerCreate):
         cleaned_input_extra["is_staff"] = False
         clean_save.clean_user_extra(instance, cleaned_input_extra, data)
         clean_save.clean_assegna_rappresentante(cls, info, instance, cleaned_input_extra)
-        print("super")
+        # print("super")
         return cleaned_input
 
     @classmethod
     def _save_extra(cls, info: ResolveInfo, instance, cleaned_data):
         cleaned_data_extra = cleaned_data["extra"]
-        with traced_atomic_transaction():
-            clean_save.controllaOCreaUserExtra(instance)
-            # salvo le informazioni in userExtra
-            clean_save.save_user_extra(instance, cleaned_data_extra)
-            clean_save.save_assegna_rappresentante(instance, cleaned_data_extra)
+        clean_save.controllaOCreaUserExtra(instance)
+        # salvo le informazioni in userExtra
+        clean_save.save_user_extra(instance, cleaned_data_extra)
+        clean_save.save_assegna_rappresentante(instance, cleaned_data_extra)
     
     @classmethod
     def perform_mutation(cls, _root, info: ResolveInfo, /, **data):
@@ -134,14 +133,74 @@ class ClienteCrea(CustomerCreate):
         private_metadata_list = cleaned_input.pop("private_metadata", None)
         instance = cls.construct_instance(instance, cleaned_input)
 
-        cls.validate_and_update_metadata(instance, metadata_list, private_metadata_list)
-        cls.clean_instance(info, instance)
-        cls.save(info, instance, cleaned_input)
-        cls._save_m2m(info, instance, cleaned_input)
-        cls._save_extra(info, instance, cleaned_input) # tutto uguale all'originale, tranne questo
-        cls.post_save_action(info, instance, cleaned_input)
-        return ClienteCrea(user_extra = instance.extra)
 
+        with traced_atomic_transaction():
+            cls.validate_and_update_metadata(instance, metadata_list, private_metadata_list)
+            cls.clean_instance(info, instance)
+            cls.save(info, instance, cleaned_input)
+            cls._save_m2m(info, instance, cleaned_input)
+            cls._save_extra(info, instance, cleaned_input) # tutto uguale all'originale, tranne questo
+            cls.post_save_action(info, instance, cleaned_input)
+        response = cls.success_response(instance)
+        response.user_extra = instance.extra
+        return response
+
+class ClienteAggiorna(CustomerUpdate):
+    user_extra = graphene.Field(
+        type.UserExtra, description="A userExtra instance"
+    )
+    class Arguments:
+        id = graphene.ID(description="ID di Saleor-USER da aggiornare", required=True)
+        input = ClienteInput(
+            description="Fields required to update a customer.", required=True
+        )
+    class Meta:
+        model = models.User
+        object_type = type.User
+        description = "Updates an existing customer."
+        exclude = ["password"]
+        permissions = (AccountPermissions.MANAGE_USERS,)
+        error_type_class = AccountError
+        error_type_field = "account_errors"
+
+    @classmethod
+    def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
+        cleaned_input = super().clean_input(info, instance, data, **kwargs)
+        cleaned_input_extra = cleaned_input["extra"]
+        cleaned_input_extra["is_staff"] = False
+        clean_save.clean_user_extra(instance, cleaned_input_extra, data)
+        clean_save.clean_assegna_rappresentante(cls, info, instance, cleaned_input_extra)
+        # print("super")
+        return cleaned_input
+
+    @classmethod
+    def _save_extra(cls, info: ResolveInfo, instance, cleaned_data):
+        cleaned_data_extra = cleaned_data["extra"]
+        clean_save.accerta_user_extra_or_error(instance)
+        # salvo le informazioni in userExtra
+        clean_save.save_user_extra(instance, cleaned_data_extra)
+        clean_save.save_assegna_rappresentante(instance, cleaned_data_extra)
+    
+    @classmethod
+    def perform_mutation(cls, _root, info: ResolveInfo, /, **data):
+        instance = cls.get_instance(info, **data)
+        data = data.get("input")
+        cleaned_input = cls.clean_input(info, instance, data)
+        metadata_list = cleaned_input.pop("metadata", None)
+        private_metadata_list = cleaned_input.pop("private_metadata", None)
+        instance = cls.construct_instance(instance, cleaned_input)
+
+        with traced_atomic_transaction():
+            cls.validate_and_update_metadata(instance, metadata_list, private_metadata_list)
+            cls.clean_instance(info, instance)
+            cls.save(info, instance, cleaned_input)
+            cls._save_m2m(info, instance, cleaned_input)
+            cls._save_extra(info, instance, cleaned_input) # tutto uguale all'originale, tranne questo
+            cls.post_save_action(info, instance, cleaned_input)
+        response = cls.success_response(instance)
+        response.user_extra = instance.extra
+        return response
+    
 class StaffRappresentanteInput(graphene.InputObjectType):
     is_rappresentante = graphene.Boolean(description="se è un rappresentante", default = False)
     commissione = graphene.Float()
@@ -268,92 +327,8 @@ def clean_account_extra_input(cls, info, instance, data, cleaned_input):
 
 
 
-class ClienteInput2(UserCreateInput):
-    denominazione = graphene.String(description="nome completo")
-    id_danea = graphene.String(description="id cliene nel programma DaneaEsayfatt")
-    tipo_cliente = graphene.String(choice = models.TipoUtente.CHOICES, default = models.TipoUtente.AZIENDA)
-
-    tel = graphene.String(description="telefono dell'utente")
-    cell = graphene.String(description="cellulare dell'utente")
-    
-    #is_no_login = models.BooleanField(default=False) # sostituito per 
-    rappresentante = graphene.String(description="email del rappresentate")
-    # dati azienda
-    piva = graphene.String()
-    cf = graphene.String()
-    # ragione sociale nel nome
-    pec = graphene.String()
-    sdi = graphene.String()
-    #Pubblica amministrazione
-    rif_ammin = graphene.String()
-    split_payment = graphene.Boolean(default=False)
-
-    # addresses = graphene.List(AddressInput)
-    # contatti = graphene.List(ContattoInput)
-
-    iva = graphene.String()
-    porto = graphene.String(choice = models.TipoPorto.CHOICES, default = models.TipoPorto.FRANCO_CON_ADDEBITO) # franco, assegnato, ecc
-    vettore = graphene.String(choice = models.TipoVettore.CHOICES, default = models.TipoVettore.VETTORE_GLS) # franco, assegnato, ecc
-    pagamento = graphene.String()
-    coordinate_bancarie = graphene.String()
-    listino = graphene.String()
-    sconto = graphene.Float()
-class StaffInput2(ClienteInput2):
-    #rappresentante
-    is_staff = graphene.Boolean(defult = False, description="se questo utente è uno staff.")
-    is_rappresentante = graphene.Boolean(defult = False, description="se questo staff è un rappresentante. DEVE essere anche STAFF!")
-    commissione = graphene.Float(default = 0, description="compenso che ha il prappresentante con i suoi clienti")
-           
-    
-class ClienteCrea2(CustomerCreate):
-    class Arguments:
-        input = ClienteInput2(
-            description="Fields required to create a customer.", required=True
-        )
-    class Meta:
-        description = "Creates a new customer."
-        exclude = ["password"]
-        permissions = (AccountPermissions.MANAGE_USERS,)
-        error_type_class = AccountError
-        error_type_field = "account_errors"
-        model = models.UserExtra
-        object_type = type.UserExtra
-
-    @classmethod
-    def clean_input(cls, info, instance, data):
-        billing = data.get(BILLING_ADDRESS_FIELD, None)
-        billing_vuoto = True
-        if billing:
-            for c in billing:
-                if billing[c]:
-                    billing_vuoto = False
-        if billing_vuoto:
-            data.pop(BILLING_ADDRESS_FIELD, None) #elimino da data BILLING cosi non da errore di field obbligatori vuoti
-        cleaned_input = super().clean_input(info, instance, data)
-
-        return clean_account_extra_input(cls, info, instance, data, cleaned_input)
 
 
-
-class ClienteAggiorna(CustomerUpdate):
-    class Arguments:
-        id = graphene.ID(description="ID of a customer to update.", required=True)
-        input = ClienteInput2(
-            description="Fields required to update a customer.", required=True
-        )
-    class Meta:
-        model = models.UserExtra
-        object_type = type.UserExtra
-        description = "Updates an existing customer."
-        exclude = ["password"]
-        permissions = (AccountPermissions.MANAGE_USERS,)
-        error_type_class = AccountError
-        error_type_field = "account_errors"
-
-    @classmethod
-    def clean_input(cls, info, instance, data):
-        cleaned_input = super().clean_input(info, instance, data)
-        return clean_account_extra_input(cls, info, instance, data, cleaned_input)
 
 class StaffCrea2(StaffCreate):
     class Arguments:
