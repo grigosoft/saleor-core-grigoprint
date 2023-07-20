@@ -1,11 +1,11 @@
-from .staff import AssegnaRappresentante, ClienteCrea, StaffCrea
+from .staff import AssegnaRappresentante, ClienteCrea, ClienteAggiorna,StaffCrea
 from .tabelle import IvaAggiorna, IvaCancella, IvaCrea, ListinoAggiorna, ListinoCancella, ListinoCrea
 from .contatto import ContattoCrea, ContattoAggiorna, ContattoCancella
 
 class AccountExtraMutation():
     # STAFF ----------
     cliente_crea = ClienteCrea.Field()
-    # cliente_aggiorna = 
+    cliente_aggiorna = ClienteAggiorna.Field()
     # cliente_cancella = 
     staff_crea = StaffCrea.Field()
     # staff_aggiorna = 
