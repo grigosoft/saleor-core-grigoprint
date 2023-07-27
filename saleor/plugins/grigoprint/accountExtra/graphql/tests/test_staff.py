@@ -990,10 +990,12 @@ def test_mutations_staff(
     staff_api_client,
     user_api_client,
     staff_user,
+    permission_manage_users,
     permission_manage_staff
 ):
     staff_api_client.user.user_permissions.add(
-        permission_manage_staff
+        permission_manage_staff,
+        permission_manage_users
     )
     # CREATE -------
     email = "staff.crea@test.it"
@@ -1122,7 +1124,7 @@ def test_mutations_staff(
     variables = {"id": user_id}
     response = staff_api_client.post_graphql(MUTATION_CANCELLA_STAFF, variables)
     content = get_graphql_content(response)
-    data = content["data"]["customerDelete"]["user"]
+    data = content["data"]["staffDelete"]["user"]
     #controllo corrispondenza a database con i dati restituiti dalla mutazione
     users = UserExtra.objects.filter(user__email = email)
     assert len(users) == 0

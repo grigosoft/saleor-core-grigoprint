@@ -8,7 +8,7 @@ class AccountExtraMutation():
     cliente_aggiorna = ClienteAggiorna.Field()
     # cliente_cancella = 
     staff_crea = StaffCrea.Field()
-    # staff_aggiorna = StaffAggiorna.Field()
+    staff_aggiorna = StaffAggiorna.Field()
     # staff_cancella = #? probabilmente basta l'originale
     contatto_crea = ContattoCrea.Field()
     contatto_aggiorna = ContattoAggiorna.Field()
