@@ -123,32 +123,18 @@ class ClienteCrea(CustomerCreate):
         return cleaned_input
 
     @classmethod
-    def _save_extra(cls, info: ResolveInfo, instance, cleaned_data):
-        cleaned_data_extra = cleaned_data["extra"]
+    def save(cls, info: ResolveInfo, instance, cleaned_input):
+        super().save(info, instance, cleaned_input)
+        cleaned_input_extra = cleaned_input["extra"]
         clean_save.controllaOCreaUserExtra(instance)
         # salvo le informazioni in userExtra
-        clean_save.save_user_extra(instance, cleaned_data_extra)
-        clean_save.save_assegna_rappresentante(instance, cleaned_data_extra)
+        clean_save.save_user_extra(instance, cleaned_input_extra)
+        clean_save.save_assegna_rappresentante(instance, cleaned_input_extra)
     
     @classmethod
     def perform_mutation(cls, _root, info: ResolveInfo, /, **data):
-        instance = cls.get_instance(info, **data)
-        data = data.get("input")
-        cleaned_input = cls.clean_input(info, instance, data)
-        metadata_list = cleaned_input.pop("metadata", None)
-        private_metadata_list = cleaned_input.pop("private_metadata", None)
-        instance = cls.construct_instance(instance, cleaned_input)
-
-
-        with traced_atomic_transaction():
-            cls.validate_and_update_metadata(instance, metadata_list, private_metadata_list)
-            cls.clean_instance(info, instance)
-            cls.save(info, instance, cleaned_input)
-            cls._save_m2m(info, instance, cleaned_input)
-            cls._save_extra(info, instance, cleaned_input) # tutto uguale all'originale, tranne questo
-            cls.post_save_action(info, instance, cleaned_input)
-        response = cls.success_response(instance)
-        response.user_extra = instance.extra
+        response = super().perform_mutation(_root,info,**data)
+        response.user_extra = response.user.extra
         return response
 
 class ClienteAggiorna(CustomerUpdate):
@@ -180,31 +166,18 @@ class ClienteAggiorna(CustomerUpdate):
         return cleaned_input
 
     @classmethod
-    def _save_extra(cls, info: ResolveInfo, instance, cleaned_data):
-        cleaned_data_extra = cleaned_data["extra"]
+    def save(cls, info: ResolveInfo, instance, cleaned_input):
+        super().save(info, instance, cleaned_input)
+        cleaned_input_extra = cleaned_input["extra"]
         clean_save.accerta_user_extra_or_error(instance)
         # salvo le informazioni in userExtra
-        clean_save.save_user_extra(instance, cleaned_data_extra)
-        clean_save.save_assegna_rappresentante(instance, cleaned_data_extra)
+        clean_save.save_user_extra(instance, cleaned_input_extra)
+        clean_save.save_assegna_rappresentante(instance, cleaned_input_extra)
     
     @classmethod
     def perform_mutation(cls, _root, info: ResolveInfo, /, **data):
-        instance = cls.get_instance(info, **data)
-        data = data.get("input")
-        cleaned_input = cls.clean_input(info, instance, data)
-        metadata_list = cleaned_input.pop("metadata", None)
-        private_metadata_list = cleaned_input.pop("private_metadata", None)
-        instance = cls.construct_instance(instance, cleaned_input)
-
-        with traced_atomic_transaction():
-            cls.validate_and_update_metadata(instance, metadata_list, private_metadata_list)
-            cls.clean_instance(info, instance)
-            cls.save(info, instance, cleaned_input)
-            cls._save_m2m(info, instance, cleaned_input)
-            cls._save_extra(info, instance, cleaned_input) # tutto uguale all'originale, tranne questo
-            cls.post_save_action(info, instance, cleaned_input)
-        response = cls.success_response(instance)
-        response.user_extra = instance.extra
+        response = super().perform_mutation(_root,info,**data)
+        response.user_extra = response.user.extra
         return response
 
 
@@ -249,36 +222,22 @@ class StaffCrea(StaffCreate):
         return cleaned_input
         
     @classmethod
-    def _save_extra(cls, info: ResolveInfo, instance, cleaned_data):
-        cleaned_data_extra = cleaned_data["extra"]
-        clean_save.accerta_user_extra_or_error(instance)
+    def save(cls, info: ResolveInfo, user, cleaned_input, send_notification=True):
+        super().save(info, user, cleaned_input, send_notification)
+        cleaned_input_extra = cleaned_input["extra"]
+        clean_save.controllaOCreaUserExtra(user)
         # salvo le informazioni in userExtra
-        clean_save.save_user_extra(instance, cleaned_data_extra)
-        clean_save.save_assegna_rappresentante(instance, cleaned_data_extra)
-        clean_save.save_is_rappresentante(instance,cleaned_data)
+        clean_save.save_user_extra(user, cleaned_input_extra)
+        clean_save.save_assegna_rappresentante(user, cleaned_input_extra)
+        clean_save.save_is_rappresentante(user,cleaned_input)
     
     @classmethod
     def perform_mutation(cls, _root, info: ResolveInfo, /, **data):
-        instance = cls.get_instance(info, **data)
-        data = data.get("input")
-        cleaned_input = cls.clean_input(info, instance, data)
-        metadata_list = cleaned_input.pop("metadata", None)
-        private_metadata_list = cleaned_input.pop("private_metadata", None)
-        instance = cls.construct_instance(instance, cleaned_input)
-
-
-        with traced_atomic_transaction():
-            cls.validate_and_update_metadata(instance, metadata_list, private_metadata_list)
-            cls.clean_instance(info, instance)
-            cls.save(info, instance, cleaned_input)
-            cls._save_m2m(info, instance, cleaned_input)
-            cls._save_extra(info, instance, cleaned_input) # tutto uguale all'originale, tranne questo
-            cls.post_save_action(info, instance, cleaned_input)
-        response = cls.success_response(instance)
-        response.user_extra = instance.extra
+        response = super().perform_mutation(_root,info,**data)
+        response.user_extra = response.user.extra
         return response
 
-class StaffAggiorna(CustomerUpdate):
+class StaffAggiorna(StaffUpdate):
     user_extra = graphene.Field(
         type.UserExtra, description="A userExtra instance"
     )
@@ -307,33 +266,19 @@ class StaffAggiorna(CustomerUpdate):
         return cleaned_input
         
     @classmethod
-    def _save_extra(cls, info: ResolveInfo, instance, cleaned_data):
-        cleaned_data_extra = cleaned_data["extra"]
-        clean_save.accerta_user_extra_or_error(instance)
+    def save(cls, info: ResolveInfo, user, cleaned_input, send_notification=True):
+        super().save(info, user, cleaned_input, send_notification)
+        cleaned_input_extra = cleaned_input["extra"]
+        clean_save.accerta_user_extra_or_error(user)
         # salvo le informazioni in userExtra
-        clean_save.save_user_extra(instance, cleaned_data_extra)
-        clean_save.save_assegna_rappresentante(instance, cleaned_data_extra)
-        clean_save.save_is_rappresentante(instance,cleaned_data)
+        clean_save.save_user_extra(user, cleaned_input_extra)
+        clean_save.save_assegna_rappresentante(user, cleaned_input_extra)
+        clean_save.save_is_rappresentante(user,cleaned_input)
     
     @classmethod
     def perform_mutation(cls, _root, info: ResolveInfo, /, **data):
-        instance = cls.get_instance(info, **data)
-        data = data.get("input")
-        cleaned_input = cls.clean_input(info, instance, data)
-        metadata_list = cleaned_input.pop("metadata", None)
-        private_metadata_list = cleaned_input.pop("private_metadata", None)
-        instance = cls.construct_instance(instance, cleaned_input)
-
-
-        with traced_atomic_transaction():
-            cls.validate_and_update_metadata(instance, metadata_list, private_metadata_list)
-            cls.clean_instance(info, instance)
-            cls.save(info, instance, cleaned_input)
-            cls._save_m2m(info, instance, cleaned_input)
-            cls._save_extra(info, instance, cleaned_input) # tutto uguale all'originale, tranne questo
-            cls.post_save_action(info, instance, cleaned_input)
-        response = cls.success_response(instance)
-        response.user_extra = instance.extra
+        response = super().perform_mutation(_root,info,**data)
+        response.user_extra = response.user.extra
         return response
     
 
