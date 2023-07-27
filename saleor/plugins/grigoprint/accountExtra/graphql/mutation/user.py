@@ -13,6 +13,7 @@ class AccountExtraBaseInput(graphene.InputObjectType):
     cf = graphene.String()
     pec = graphene.String()
     sdi = graphene.String(description="Codice destinatario per fatturazione elettronica: SDI o pec")
+    coordinate_bancarie = graphene.String()
     # pubblica amministrazione
     rif_ammin = graphene.String()
     split_payment = graphene.Boolean()
