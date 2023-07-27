@@ -400,6 +400,7 @@ def test_mutations_contatto(
     response = staff_api_client.post_graphql(MUTATION_CREA_CONTATTO, variables)
     content = get_graphql_content(response)
     data = content["data"]["contattoCrea"]["contatto"]
+    assert content["data"]["contattoCrea"]["errors"] == []
     #controllo corrispondenza a database con i dati restituiti dalla mutazione
     contatti = Contatto.objects.filter(user_extra = user_extra)
     assert len(contatti) == 1
@@ -424,6 +425,7 @@ def test_mutations_contatto(
     response = staff_api_client.post_graphql(MUTATION_AGGIORNA_CONTATTO, variables)
     content = get_graphql_content(response)
     data = content["data"]["contattoAggiorna"]["contatto"]
+    assert content["data"]["contattoAggiorna"]["errors"] == []
     #controllo corrispondenza a database con i dati restituiti dalla mutazione
     contatti = Contatto.objects.filter(user_extra = user_extra)
     assert len(contatti) == 1
@@ -451,7 +453,7 @@ def test_mutations_contatto(
     assert_no_permission(response_user)
 
 MUTATION_CREA_CLIENTE = """
-    mutation crea_cliente (
+    mutation clienteCrea (
         $email:String!
         $denominazione:String!,
         $piva:String,
@@ -460,6 +462,7 @@ MUTATION_CREA_CLIENTE = """
         $sdi:String,
         $rifAmmin:String,
         $splitPayment:Boolean,
+        $coordinateBancarie:String,
         $idDanea:String,
         $rappresentanteId:ID,
         $tipoUtente:TipoUtenteEnum,
@@ -482,6 +485,7 @@ MUTATION_CREA_CLIENTE = """
                 sdi:$sdi,
                 rifAmmin:$rifAmmin,
                 splitPayment:$splitPayment,
+                coordinateBancarie:$coordinateBancarie,
                 idDanea:$idDanea,
                 rappresentanteId:$rappresentanteId,
                 tipoUtente:$tipoUtente,
@@ -500,6 +504,7 @@ MUTATION_CREA_CLIENTE = """
             user{
                 id
                 email
+                isStaff
             }
             userExtra{
                 id
@@ -511,6 +516,7 @@ MUTATION_CREA_CLIENTE = """
                 sdi
                 rifAmmin,
                 splitPayment
+                coordinateBancarie
                 idDanea
                 rappresentante{
                     id
@@ -547,6 +553,7 @@ MUTATION_AGGIORNA_CLIENTE = """
         $sdi:String,
         $rifAmmin:String,
         $splitPayment:Boolean,
+        $coordinateBancarie:String,
         $idDanea:String,
         $rappresentanteId:ID,
         $tipoUtente:TipoUtenteEnum,
@@ -570,6 +577,7 @@ MUTATION_AGGIORNA_CLIENTE = """
                 sdi:$sdi,
                 rifAmmin:$rifAmmin,
                 splitPayment:$splitPayment,
+                coordinateBancarie:$coordinateBancarie,
                 idDanea:$idDanea,
                 rappresentanteId:$rappresentanteId,
                 tipoUtente:$tipoUtente,
@@ -588,6 +596,7 @@ MUTATION_AGGIORNA_CLIENTE = """
             user{
                 id
                 email
+                isStaff
             }
             userExtra{
                 id
@@ -599,6 +608,7 @@ MUTATION_AGGIORNA_CLIENTE = """
                 sdi
                 rifAmmin,
                 splitPayment
+                coordinateBancarie
                 idDanea
                 rappresentante{
                     id
@@ -620,6 +630,20 @@ MUTATION_AGGIORNA_CLIENTE = """
                     info
                 }
                 sconto
+            }
+        }
+    }
+"""
+MUTATION_CANCELLA_CLIENTE = """
+    mutation customerDelete (
+        $id:ID!
+    ){
+        customerDelete(
+        id:$id
+        ){
+            user{
+                id
+                email
             }
         }
     }
@@ -651,6 +675,7 @@ def test_mutations_cliente(
                     "sdi":"m5uecc",
                     "rifAmmin":"rif ammin",
                     "splitPayment":False,
+                    "coordinateBancarie":"it01iban di prova zzz",
                     "idDanea":"1",
                     "rappresentanteId":rappresentante_id,
                     "tipoUtente":TipoUtente.AZIENDA,
@@ -664,6 +689,8 @@ def test_mutations_cliente(
     response = staff_api_client.post_graphql(MUTATION_CREA_CLIENTE, variables)
     content = get_graphql_content(response)
     data = content["data"]["clienteCrea"]["userExtra"]
+    assert content["data"]["clienteCrea"]["errors"] == []
+    assert not content["data"]["clienteCrea"]["user"]["isStaff"]
     #controllo corrispondenza a database con i dati restituiti dalla mutazione
     users = UserExtra.objects.filter(user__email = email)
     assert len(users) == 1
@@ -677,6 +704,7 @@ def test_mutations_cliente(
     assert data["sdi"] == user.sdi
     assert data["rifAmmin"] == user.rif_ammin
     assert data["splitPayment"] == user.split_payment
+    assert data["coordinateBancarie"] == user.coordinate_bancarie
     assert data["idDanea"] == user.id_danea
     assert user.rappresentante and data["rappresentante"]["email"] == user.rappresentante.email
     assert data["tipoUtente"] == user.tipo_utente
@@ -707,6 +735,7 @@ def test_mutations_cliente(
                     "sdi":"m5uecxc",
                     "rifAmmin":"rif amminn2",
                     "splitPayment":True,
+                    "coordinateBancarie":"it01iban modificato di prova zzz",
                     "idDanea":"2",
                     "rappresentanteId":rappresentante_id,
                     "tipoUtente":TipoUtente.AZIENDA,
@@ -721,6 +750,7 @@ def test_mutations_cliente(
     content = get_graphql_content(response)
     data = content["data"]["clienteAggiorna"]["userExtra"]
     assert content["data"]["clienteAggiorna"]["errors"] == []
+    assert not content["data"]["clienteAggiorna"]["user"]["isStaff"]
     #controllo corrispondenza a database con i dati restituiti dalla mutazione
     users = UserExtra.objects.filter(user__email = email)
     assert len(users) == 1
@@ -734,6 +764,7 @@ def test_mutations_cliente(
     assert data["sdi"] == user.sdi
     assert data["rifAmmin"] == user.rif_ammin
     assert data["splitPayment"] == user.split_payment
+    assert data["coordinateBancarie"] == user.coordinate_bancarie
     assert data["idDanea"] == user.id_danea
     assert user.rappresentante and data["rappresentante"]["email"] == user.rappresentante.email
     assert data["tipoUtente"] == user.tipo_utente
@@ -747,3 +778,351 @@ def test_mutations_cliente(
     # no access for normal user
     response_user = user_api_client.post_graphql(MUTATION_AGGIORNA_CLIENTE, variables)
     assert_no_permission(response_user)
+
+    #DELETE
+    # mi assicuro che funziona la delete originale di saleor
+    variables = {"id": user_id}
+    response = staff_api_client.post_graphql(MUTATION_CANCELLA_CLIENTE, variables)
+    content = get_graphql_content(response)
+    data = content["data"]["customerDelete"]["user"]
+    #controllo corrispondenza a database con i dati restituiti dalla mutazione
+    users = UserExtra.objects.filter(user__email = email)
+    assert len(users) == 0
+
+
+MUTATION_CREA_STAFF = """
+    mutation staffCrea (
+        $email:String!
+        $denominazione:String!,
+        $piva:String,
+        $cf:String,
+        $pec:String,
+        $sdi:String,
+        $rifAmmin:String,
+        $splitPayment:Boolean,
+        $coordinateBancarie:String,
+        $idDanea:String,
+        $rappresentanteId:ID,
+        $tipoUtente:TipoUtenteEnum,
+        $ivaId:ID,
+        $porto:TipoPortoEnum,
+        $vettore:TipoVettoreEnum,
+        $pagamento:String,
+        $listinoId:ID,
+        $sconto:Float
+        
+    ){
+        staffCrea(
+        input:{
+            email:$email,
+            extra:{
+                denominazione:$denominazione,
+                piva:$piva,
+                cf:$cf,
+                pec:$pec,
+                sdi:$sdi,
+                rifAmmin:$rifAmmin,
+                splitPayment:$splitPayment,
+                coordinateBancarie:$coordinateBancarie,
+                idDanea:$idDanea,
+                rappresentanteId:$rappresentanteId,
+                tipoUtente:$tipoUtente,
+                ivaId:$ivaId,
+                porto:$porto,
+                vettore:$vettore,
+                pagamento:$pagamento,
+                listinoId:$listinoId,
+                sconto:$sconto
+            }
+        }){
+            errors{
+                field
+                message
+            }
+            user{
+                id
+                email
+                isStaff
+            }
+            userExtra{
+                id
+                email
+                denominazione
+                piva
+                cf
+                pec
+                sdi
+                rifAmmin,
+                splitPayment
+                coordinateBancarie
+                idDanea
+                rappresentante{
+                    id
+                    email
+                }
+                isRappresentante
+                tipoUtente
+                iva{
+                    nome
+                    valore
+                    info
+                }
+                porto
+                vettore
+                pagamento
+                listino{
+                    nome
+                    ricarico
+                    info
+                }
+                sconto
+            }
+        }
+    }
+"""
+MUTATION_AGGIORNA_STAFF = """
+    mutation staffAggiorna (
+        $id:ID!
+        $email:String!
+        $denominazione:String!,
+        $piva:String,
+        $cf:String,
+        $pec:String,
+        $sdi:String,
+        $rifAmmin:String,
+        $splitPayment:Boolean,
+        $coordinateBancarie:String,
+        $idDanea:String,
+        $rappresentanteId:ID,
+        $tipoUtente:TipoUtenteEnum,
+        $ivaId:ID,
+        $porto:TipoPortoEnum,
+        $vettore:TipoVettoreEnum,
+        $pagamento:String,
+        $listinoId:ID,
+        $sconto:Float
+        
+    ){
+        staffAggiorna(
+        id:$id
+        input:{
+            email:$email,
+            extra:{
+                denominazione:$denominazione,
+                piva:$piva,
+                cf:$cf,
+                pec:$pec,
+                sdi:$sdi,
+                rifAmmin:$rifAmmin,
+                splitPayment:$splitPayment,
+                coordinateBancarie:$coordinateBancarie,
+                idDanea:$idDanea,
+                rappresentanteId:$rappresentanteId,
+                tipoUtente:$tipoUtente,
+                ivaId:$ivaId,
+                porto:$porto,
+                vettore:$vettore,
+                pagamento:$pagamento,
+                listinoId:$listinoId,
+                sconto:$sconto
+            }
+        }){
+            errors{
+                field
+                message
+            }
+            user{
+                id
+                email
+                isStaff
+            }
+            userExtra{
+                id
+                email
+                denominazione
+                piva
+                cf
+                pec
+                sdi
+                rifAmmin,
+                splitPayment
+                coordinateBancarie
+                idDanea
+                rappresentante{
+                    id
+                    email
+                }
+                isRappresentante
+                tipoUtente
+                iva{
+                    nome
+                    valore
+                    info
+                }
+                porto
+                vettore
+                pagamento
+                listino{
+                    nome
+                    ricarico
+                    info
+                }
+                sconto
+            }
+        }
+    }
+"""
+MUTATION_CANCELLA_STAFF = """
+    mutation staffDelete (
+        $id:ID!
+    ){
+        staffDelete(
+        id:$id
+        ){
+            user{
+                id
+                email
+            }
+        }
+    }
+"""
+def test_mutations_staff(
+    staff_api_client,
+    user_api_client,
+    staff_user,
+    permission_manage_staff
+):
+    staff_api_client.user.user_permissions.add(
+        permission_manage_staff
+    )
+    # CREATE -------
+    email = "staff.crea@test.it"
+    # creo rappresentante
+    rappresentante = UserExtra.objects.create(user=staff_user, is_rappresentante=True, denominazione="nome rappresentante")
+    rappresentante_id = graphene.Node.to_global_id("User", rappresentante.user.pk)
+    iva = Iva.objects.create(nome="22%",valore=0.22,info="standard 22%")
+    iva_id = iva.pk
+    listino = Listino.objects.create(nome="pubblico",ricarico=0.34,info="Cliente finale")
+    listino_id = listino.pk
+    variables = {
+                    "email":email,
+                    "denominazione":"den test",
+                    "piva":"01628380238",
+                    "cf":"gngntnt28d26s4",
+                    "pec":"bandieregrigolni@pec.it",
+                    "sdi":"m5uecc",
+                    "rifAmmin":"rif ammin",
+                    "splitPayment":False,
+                    "coordinateBancarie":"it01iban di prova zzz",
+                    "idDanea":"1",
+                    "rappresentanteId":rappresentante_id,
+                    "tipoUtente":TipoUtente.AZIENDA,
+                    "ivaId":iva_id,
+                    "porto":TipoPorto.ASSEGNATO,
+                    "vettore":TipoVettore.VETTORE_BRT,
+                    "pagamento":"bonifico posticipato??",
+                    "listinoId":listino_id,
+                    "sconto":0.1
+                }
+    response = staff_api_client.post_graphql(MUTATION_CREA_STAFF, variables)
+    content = get_graphql_content(response)
+    data = content["data"]["staffCrea"]["userExtra"]
+    assert content["data"]["staffCrea"]["errors"] == []
+    assert content["data"]["staffCrea"]["user"]["isStaff"]
+    #controllo corrispondenza a database con i dati restituiti dalla mutazione
+    users = UserExtra.objects.filter(user__email = email)
+    assert len(users) == 1
+    user = users.first()
+    assert user is not None
+    assert data["email"] == user.user.email
+    assert data["denominazione"] == user.denominazione
+    assert data["piva"] == user.piva
+    assert data["cf"] == user.cf
+    assert data["pec"] == user.pec
+    assert data["sdi"] == user.sdi
+    assert data["rifAmmin"] == user.rif_ammin
+    assert data["splitPayment"] == user.split_payment
+    assert data["coordinateBancarie"] == user.coordinate_bancarie
+    assert data["idDanea"] == user.id_danea
+    assert user.rappresentante and data["rappresentante"]["email"] == user.rappresentante.email
+    assert data["tipoUtente"] == user.tipo_utente
+    assert user.iva and data["iva"]["nome"] == user.iva.nome
+    assert user.listino and data["listino"]["nome"] == user.listino.nome
+    assert data["porto"] == user.porto
+    assert data["vettore"] == user.vettore
+    assert data["pagamento"] == user.pagamento
+    assert data["sconto"] == user.sconto
+    
+    # no access for normal user
+    response_user = user_api_client.post_graphql(MUTATION_CREA_STAFF, variables)
+    assert_no_permission(response_user)
+    
+    # UPDATE -----
+    iva = Iva.objects.create(nome="0%",valore=0,info="esportazione")
+    iva_id = iva.pk
+    listino = Listino.objects.create(nome="agenzie",ricarico=0.12,info="rivenditori")
+    listino_id = listino.pk
+    user_id = graphene.Node.to_global_id("User", user.pk)
+    variables = {
+                    "id":user_id,
+                    "email":email,
+                    "denominazione":"aggiorna  test",
+                    "piva":"01628380239",
+                    "cf":"gngntnt28d26s5",
+                    "pec":"bandieregrigolni2@pec.it",
+                    "sdi":"m5uecxc",
+                    "rifAmmin":"rif amminn2",
+                    "splitPayment":True,
+                    "coordinateBancarie":"it01iban modificato di prova zzz",
+                    "idDanea":"2",
+                    "rappresentanteId":rappresentante_id,
+                    "tipoUtente":TipoUtente.AZIENDA,
+                    "ivaId":iva_id,
+                    "porto":TipoPorto.ASSEGNATO,
+                    "vettore":TipoVettore.VETTORE_BRT,
+                    "pagamento":"bonifico posticipato??",
+                    "listinoId":listino_id,
+                    "sconto":0.1
+                }
+    response = staff_api_client.post_graphql(MUTATION_AGGIORNA_STAFF, variables)
+    content = get_graphql_content(response)
+    data = content["data"]["staffAggiorna"]["userExtra"]
+    assert content["data"]["staffAggiorna"]["errors"] == []
+    assert content["data"]["staffAggiorna"]["user"]["isStaff"]
+    #controllo corrispondenza a database con i dati restituiti dalla mutazione
+    users = UserExtra.objects.filter(user__email = email)
+    assert len(users) == 1
+    user = users.first()
+    assert user is not None
+    assert data["email"] == user.user.email
+    assert data["denominazione"] == user.denominazione
+    assert data["piva"] == user.piva
+    assert data["cf"] == user.cf
+    assert data["pec"] == user.pec
+    assert data["sdi"] == user.sdi
+    assert data["rifAmmin"] == user.rif_ammin
+    assert data["splitPayment"] == user.split_payment
+    assert data["coordinateBancarie"] == user.coordinate_bancarie
+    assert data["idDanea"] == user.id_danea
+    assert user.rappresentante and data["rappresentante"]["email"] == user.rappresentante.email
+    assert data["tipoUtente"] == user.tipo_utente
+    assert user.iva and data["iva"]["nome"] == user.iva.nome
+    assert user.listino and data["listino"]["nome"] == user.listino.nome
+    assert data["porto"] == user.porto
+    assert data["vettore"] == user.vettore
+    assert data["pagamento"] == user.pagamento
+    assert data["sconto"] == user.sconto
+    
+    # no access for normal user
+    response_user = user_api_client.post_graphql(MUTATION_AGGIORNA_STAFF, variables)
+    assert_no_permission(response_user)
+
+    #DELETE
+    # mi assicuro che funziona la delete originale di saleor
+    variables = {"id": user_id}
+    response = staff_api_client.post_graphql(MUTATION_CANCELLA_STAFF, variables)
+    content = get_graphql_content(response)
+    data = content["data"]["customerDelete"]["user"]
+    #controllo corrispondenza a database con i dati restituiti dalla mutazione
+    users = UserExtra.objects.filter(user__email = email)
+    assert len(users) == 0
