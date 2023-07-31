@@ -104,7 +104,8 @@ def save_user_extra_base(user:"User", cleaned_data):
     user_extra.cf=cleaned_data.get("cf", "")
     user_extra.pec=cleaned_data.get("pec", "")
     user_extra.sdi=cleaned_data.get("sdi", "")
-    user_extra.rif_amministrazione=cleaned_data.get("rif_amministrazione", "")
+    user_extra.coordinate_bancarie=cleaned_data.get("coordinate_bancarie", "")
+    user_extra.rif_ammin=cleaned_data.get("rif_ammin", "")
     user_extra.split_payment=cleaned_data.get("split_payment", False)
     user_extra.save()
         

@@ -134,8 +134,6 @@ class AccountQueries(graphene.ObjectType):
     )
     clienti = FilterConnectionField(
         type.UserExtraCountableConnection,
-        # filter=CustomerExtraFilterInput(description="Filtering options for customers."),
-        # sort_by=UserGrigoSortingInput(description="Sort customers."),
         description="Lista completa di utenti, in base a chi è loggato",
         filter=ClientiFilterInput(description="Filtering options for customers."),
         sort_by=UserExtraSortingInput(description="Sort customers."),
@@ -145,6 +143,7 @@ class AccountQueries(graphene.ObjectType):
             GrigoprintPermissions.IS_RAPPRESENTANTE
         ],
     )
+    
     staff_utenti = FilterConnectionField(
         type.UserExtraCountableConnection,
         # filter=StaffUserInput(description="Filtering options for staff users."),
@@ -152,17 +151,6 @@ class AccountQueries(graphene.ObjectType):
         description="List of the shop's staff users.",
         permissions=[AccountPermissions.MANAGE_STAFF],
     )
-
-    # clienti_rappresentante = graphene.Field(
-    #     type.UserGrigo,
-    #     id=graphene.Argument(graphene.ID, description="ID of the user."),
-    #     email=graphene.Argument(
-    #         graphene.String, description="Email address of the user."
-    #     ),
-        
-    #     description="Lista completa dei clienti di un rappresentante",
-    #     name = "clienti_rappresentante"
-    # )
     contatto = PermissionsField(
         type.Contatto,
         id=graphene.Argument(graphene.ID, description="ID del contatto."),
@@ -227,14 +215,6 @@ class AccountQueries(graphene.ObjectType):
         qs = filter_connection_queryset(qs, kwargs)
         return create_connection_slice(qs, info, kwargs, type.UserExtraCountableConnection)
 
-    # def resolve_clienti_rappresentante(self, info, id=None, email=None):
-    #     validate_one_of_args_is_in_query("id", id, "email", email)
-    #     user = resolve_user(info, id, email)
-    #     if user.isRappresentante:
-    #         return user.clienti
-    #     else:
-    #         return PermissionDenied("Questo utente non è un rappresentante")
-   
     @staticmethod
     def resolve_contatto(
         _root, info: ResolveInfo, *, id=None

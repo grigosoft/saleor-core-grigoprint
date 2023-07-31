@@ -2,7 +2,7 @@ from saleor.account.models import User
 from .models import UserExtra
 from typing import Optional
 
-def isUserExtra(user:Optional[User]):
+def isUserExtra(user:Optional[User]) -> bool:
     """Return Boolean
     controlla se l'utente ha la parte extra, intercettaneo le eccezzioni"""
     if not user:
