@@ -283,56 +283,58 @@ class StaffAggiorna(StaffUpdate):
     
 
 
-class ForzaPassword(BaseMutation):
-    class Arguments:
-        email = graphene.String(required=True, description="Email of a user.")
-        password = graphene.String(required=True, description="Password of a user.")
+# class ForzaPassword(BaseMutation):
+#     class Arguments:
+#         id = graphene.ID(description="ID of a user.")
+#         email = graphene.String( description="Email of a user.")
+#         password = graphene.String(required=True, description="Password of a user.")
 
-    class Meta:
-        description = (
-            "Forza una password ad un utente. Solo un superUser può farlo"
-        )
-        error_type_class = AccountError
-        error_type_field = "account_errors"
+#     class Meta:
+#         description = (
+#             "Forza una password ad un utente. Solo un superUser può farlo"
+#         )
+#         error_type_class = AccountError
+#         error_type_field = "account_errors"
 
-    @classmethod
-    def check_permissions(cls, context, permissions=None):
-        # controllo che il richiedente non sia un app
-        app = get_app_promise(context).get()
-        if app:
-            raise PermissionDenied(
-                message="Apps are not allowed to perform this mutation."
-            )
-        # controllo che il richiedente sia un super user
-        #TODO
-        return super().check_permissions(context, permissions)
+#     @classmethod
+#     def check_permissions(cls, context, permissions=None):
+#         # controllo che il richiedente non sia un app
+        
+#         app = get_app_promise(context).get()
+#         if app:
+#             raise PermissionDenied(
+#                 message="Apps are not allowed to perform this mutation."
+#             )
+#         # controllo che il richiedente sia un super user
+#         #TODO
+#         return super().check_permissions(context, permissions)
 
-    @classmethod
-    def perform_mutation(cls, _root, _info: ResolveInfo, /):
-        raise NotImplementedError() 
-        # TODO clean input
-        # _set_password_for_user(email, password):
-        return ForzaPassword()
+#     @classmethod
+#     def perform_mutation(cls, _root, _info: ResolveInfo, /):
+#         raise NotImplementedError() 
+#         # TODO clean input
+#         # _set_password_for_user(email, password):
+#         return ForzaPassword()
 
-    @classmethod
-    def _set_password_for_user(cls, email, password):
-        try:
-            user = models.User.objects.get(email=email)
-        except ObjectDoesNotExist:
-            raise ValidationError(
-                {
-                    "email": ValidationError(
-                        "User doesn't exist", code=AccountErrorCode.NOT_FOUND.value
-                    )
-                }
-            )
-        try:
-            password_validation.validate_password(password, user)
-        except ValidationError as error:
-            raise ValidationError({"password": error})
-        user.set_password(password)
-        user.save(update_fields=["password", "updated_at"])
-        # TODO account_events.customer_password_reset_event(user=user)
+#     @classmethod
+#     def _set_password_for_user(cls, email, password):
+#         try:
+#             user = models.User.objects.get(email=email)
+#         except ObjectDoesNotExist:
+#             raise ValidationError(
+#                 {
+#                     "email": ValidationError(
+#                         "User doesn't exist", code=AccountErrorCode.NOT_FOUND.value
+#                     )
+#                 }
+#             )
+#         try:
+#             password_validation.validate_password(password, user)
+#         except ValidationError as error:
+#             raise ValidationError({"password": error})
+#         user.set_password(password)
+#         user.save(update_fields=["password", "updated_at"])
+#         # TODO account_events.customer_password_reset_event(user=user)
 
 
 

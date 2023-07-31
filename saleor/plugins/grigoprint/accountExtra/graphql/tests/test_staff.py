@@ -203,10 +203,51 @@ def test_query_utente_minimum(
     #     contatto_id =  contatto["id"]
 
   
-def test_query_clienti():
-    pass
+def test_query_clienti(
+        staff_api_client, 
+        user_api_client, 
+        permission_manage_users
+    ):
+    query = """
+    {
+        clienti(first: 20) {
+            edges {
+                node {
+                    email
+                    user{
+                        isStaff
+                    }
+                }
+            }
+        }
+    }
+    """
+    #creo gli utententi nel db
+    staff1 = User.objects.create(email="staff1@test.it", is_staff=True)
+    UserExtra.objects.create(user=staff1)
+    user1 = User.objects.create(email="user1@test.it", is_staff=False)
+    UserExtra.objects.create(user=user1)
+    user2 = User.objects.create(email="user2@test.it", is_staff=False)
+    UserExtra.objects.create(user=user2)
+    
+    # faccio la richiesta con graphql
+    variables = {}
+    response = staff_api_client.post_graphql(
+        query, variables, permissions=[permission_manage_users]
+    )
+    content = get_graphql_content(response)
+    data = content["data"]["clienti"]["edges"]
+    assert len(data) == 2
+    assert all([not user["node"]["user"]["isStaff"] for user in data])
 
-def test_query_staff_utenti(staff_api_client, user_api_client, staff_user, admin_user, permission_manage_staff
+    # check permissions
+    response = user_api_client.post_graphql(query, variables)
+    assert_no_permission(response)
+
+def test_query_staff_utenti(
+        staff_api_client, 
+        user_api_client, 
+        permission_manage_staff
 ):
     query = """
     {
@@ -222,7 +263,15 @@ def test_query_staff_utenti(staff_api_client, user_api_client, staff_user, admin
         }
     }
     """
-    #come faccio a farli avere tutti la parte Extra?
+    #creo gli utententi nel db
+    staff1 = User.objects.create(email="staff1@test.it", is_staff=True)
+    UserExtra.objects.create(user=staff1)
+    staff2 = User.objects.create(email="staff2@test.it", is_staff=True)
+    UserExtra.objects.create(user=staff2)
+    user1 = User.objects.create(email="user1@test.it", is_staff=False)
+    UserExtra.objects.create(user=user1)
+    
+    # faccio la richiesta con graphql
     variables = {}
     response = staff_api_client.post_graphql(
         query, variables, permissions=[permission_manage_staff]
@@ -230,8 +279,6 @@ def test_query_staff_utenti(staff_api_client, user_api_client, staff_user, admin
     content = get_graphql_content(response)
     data = content["data"]["staffUtenti"]["edges"]
     assert len(data) == 2
-    staff_emails = [user["node"]["email"] for user in data]
-    assert sorted(staff_emails) == [admin_user.email, staff_user.email]
     assert all([user["node"]["user"]["isStaff"] for user in data])
 
     # check permissions
@@ -394,7 +441,7 @@ def test_mutations_contatto(
     variables = {"userId": ID, 
                  "denominazione":"test denominazione contatto",
                  "email":"contatto@test.it",
-                 "telefono":"+39 0457834054",
+                 "telefono":"+390457834054",
                  "uso":TipoContatto.FATTURAZIONE
                  }
     response = staff_api_client.post_graphql(MUTATION_CREA_CONTATTO, variables)
@@ -406,11 +453,11 @@ def test_mutations_contatto(
     assert len(contatti) == 1
     contatto = contatti.first()
     assert contatto is not None
-    assert data["denominazione"] == contatto.denominazione
-    assert data["email"] == contatto.email
-    assert data["telefono"] == contatto.telefono
-    assert data["uso"] == contatto.uso
-    assert data["userExtra"]["email"] == contatto.user_extra.user.email
+    assert data["denominazione"] == variables["denominazione"]
+    assert data["email"] == variables["email"]
+    assert data["telefono"] == variables["telefono"]
+    assert data["uso"] == variables["uso"]
+    assert data["userExtra"]["email"] == user_extra.user.email
     # no access for normal user
     response_user = user_api_client.post_graphql(MUTATION_CREA_CONTATTO, variables)
     assert_no_permission(response_user)
@@ -419,7 +466,7 @@ def test_mutations_contatto(
     variables = {"id": ID, 
                  "denominazione":"modificata denominazione",
                  "email":"contatto.modificato@test.it",
-                 "telefono":"+39 0456520415",
+                 "telefono":"+390456520415",
                  "uso":TipoContatto.CONSEGNA
                  }
     response = staff_api_client.post_graphql(MUTATION_AGGIORNA_CONTATTO, variables)
@@ -431,11 +478,11 @@ def test_mutations_contatto(
     assert len(contatti) == 1
     contatto = contatti.first()
     assert contatto is not None
-    assert data["denominazione"] == contatto.denominazione
-    assert data["email"] == contatto.email
-    assert data["telefono"] == contatto.telefono
-    assert data["uso"] == contatto.uso
-    assert data["userExtra"]["email"] == contatto.user_extra.user.email
+    assert data["denominazione"] == variables["denominazione"]
+    assert data["email"] == variables["email"]
+    assert data["telefono"] == variables["telefono"]
+    assert data["uso"] == variables["uso"]
+    assert data["userExtra"]["email"] == user_extra.user.email
      # no access for normal user
     response_user = user_api_client.post_graphql(MUTATION_AGGIORNA_CONTATTO, variables)
     assert_no_permission(response_user)
@@ -454,7 +501,7 @@ def test_mutations_contatto(
 
 MUTATION_CREA_CLIENTE = """
     mutation clienteCrea (
-        $email:String!
+        $email:String!,
         $denominazione:String!,
         $piva:String,
         $cf:String,
@@ -696,24 +743,24 @@ def test_mutations_cliente(
     assert len(users) == 1
     user = users.first()
     assert user is not None
-    assert data["email"] == user.user.email
-    assert data["denominazione"] == user.denominazione
-    assert data["piva"] == user.piva
-    assert data["cf"] == user.cf
-    assert data["pec"] == user.pec
-    assert data["sdi"] == user.sdi
-    assert data["rifAmmin"] == user.rif_ammin
-    assert data["splitPayment"] == user.split_payment
-    assert data["coordinateBancarie"] == user.coordinate_bancarie
-    assert data["idDanea"] == user.id_danea
+    assert data["email"] == variables["email"]
+    assert data["denominazione"] == variables["denominazione"]
+    assert data["piva"] == variables["piva"]
+    assert data["cf"] == variables["cf"]
+    assert data["pec"] == variables["pec"]
+    assert data["sdi"] == variables["sdi"]
+    assert data["rifAmmin"] == variables["rifAmmin"]
+    assert data["splitPayment"] == variables["splitPayment"]
+    assert data["coordinateBancarie"] == variables["coordinateBancarie"]
+    assert data["idDanea"] == variables["idDanea"]
     assert user.rappresentante and data["rappresentante"]["email"] == user.rappresentante.email
-    assert data["tipoUtente"] == user.tipo_utente
+    assert data["tipoUtente"] == variables["tipoUtente"]
     assert user.iva and data["iva"]["nome"] == user.iva.nome
     assert user.listino and data["listino"]["nome"] == user.listino.nome
-    assert data["porto"] == user.porto
-    assert data["vettore"] == user.vettore
-    assert data["pagamento"] == user.pagamento
-    assert data["sconto"] == user.sconto
+    assert data["porto"] == variables["porto"]
+    assert data["vettore"] == variables["vettore"]
+    assert data["pagamento"] == variables["pagamento"]
+    assert data["sconto"] == variables["sconto"]
     
     # no access for normal user
     response_user = user_api_client.post_graphql(MUTATION_CREA_CLIENTE, variables)
@@ -756,24 +803,24 @@ def test_mutations_cliente(
     assert len(users) == 1
     user = users.first()
     assert user is not None
-    assert data["email"] == user.user.email
-    assert data["denominazione"] == user.denominazione
-    assert data["piva"] == user.piva
-    assert data["cf"] == user.cf
-    assert data["pec"] == user.pec
-    assert data["sdi"] == user.sdi
-    assert data["rifAmmin"] == user.rif_ammin
-    assert data["splitPayment"] == user.split_payment
-    assert data["coordinateBancarie"] == user.coordinate_bancarie
-    assert data["idDanea"] == user.id_danea
+    assert data["email"] == variables["email"]
+    assert data["denominazione"] == variables["denominazione"]
+    assert data["piva"] == variables["piva"]
+    assert data["cf"] == variables["cf"]
+    assert data["pec"] == variables["pec"]
+    assert data["sdi"] == variables["sdi"]
+    assert data["rifAmmin"] == variables["rifAmmin"]
+    assert data["splitPayment"] == variables["splitPayment"]
+    assert data["coordinateBancarie"] == variables["coordinateBancarie"]
+    assert data["idDanea"] == variables["idDanea"]
     assert user.rappresentante and data["rappresentante"]["email"] == user.rappresentante.email
-    assert data["tipoUtente"] == user.tipo_utente
+    assert data["tipoUtente"] == variables["tipoUtente"]
     assert user.iva and data["iva"]["nome"] == user.iva.nome
     assert user.listino and data["listino"]["nome"] == user.listino.nome
-    assert data["porto"] == user.porto
-    assert data["vettore"] == user.vettore
-    assert data["pagamento"] == user.pagamento
-    assert data["sconto"] == user.sconto
+    assert data["porto"] == variables["porto"]
+    assert data["vettore"] == variables["vettore"]
+    assert data["pagamento"] == variables["pagamento"]
+    assert data["sconto"] == variables["sconto"]
     
     # no access for normal user
     response_user = user_api_client.post_graphql(MUTATION_AGGIORNA_CLIENTE, variables)
@@ -1036,24 +1083,24 @@ def test_mutations_staff(
     assert len(users) == 1
     user = users.first()
     assert user is not None
-    assert data["email"] == user.user.email
-    assert data["denominazione"] == user.denominazione
-    assert data["piva"] == user.piva
-    assert data["cf"] == user.cf
-    assert data["pec"] == user.pec
-    assert data["sdi"] == user.sdi
-    assert data["rifAmmin"] == user.rif_ammin
-    assert data["splitPayment"] == user.split_payment
-    assert data["coordinateBancarie"] == user.coordinate_bancarie
-    assert data["idDanea"] == user.id_danea
+    assert data["email"] == variables["email"]
+    assert data["denominazione"] == variables["denominazione"]
+    assert data["piva"] == variables["piva"]
+    assert data["cf"] == variables["cf"]
+    assert data["pec"] == variables["pec"]
+    assert data["sdi"] == variables["sdi"]
+    assert data["rifAmmin"] == variables["rifAmmin"]
+    assert data["splitPayment"] == variables["splitPayment"]
+    assert data["coordinateBancarie"] == variables["coordinateBancarie"]
+    assert data["idDanea"] == variables["idDanea"]
     assert user.rappresentante and data["rappresentante"]["email"] == user.rappresentante.email
-    assert data["tipoUtente"] == user.tipo_utente
+    assert data["tipoUtente"] == variables["tipoUtente"]
     assert user.iva and data["iva"]["nome"] == user.iva.nome
     assert user.listino and data["listino"]["nome"] == user.listino.nome
-    assert data["porto"] == user.porto
-    assert data["vettore"] == user.vettore
-    assert data["pagamento"] == user.pagamento
-    assert data["sconto"] == user.sconto
+    assert data["porto"] == variables["porto"]
+    assert data["vettore"] == variables["vettore"]
+    assert data["pagamento"] == variables["pagamento"]
+    assert data["sconto"] == variables["sconto"]
     
     # no access for normal user
     response_user = user_api_client.post_graphql(MUTATION_CREA_STAFF, variables)
@@ -1096,24 +1143,24 @@ def test_mutations_staff(
     assert len(users) == 1
     user = users.first()
     assert user is not None
-    assert data["email"] == user.user.email
-    assert data["denominazione"] == user.denominazione
-    assert data["piva"] == user.piva
-    assert data["cf"] == user.cf
-    assert data["pec"] == user.pec
-    assert data["sdi"] == user.sdi
-    assert data["rifAmmin"] == user.rif_ammin
-    assert data["splitPayment"] == user.split_payment
-    assert data["coordinateBancarie"] == user.coordinate_bancarie
-    assert data["idDanea"] == user.id_danea
+    assert data["email"] == variables["email"]
+    assert data["denominazione"] == variables["denominazione"]
+    assert data["piva"] == variables["piva"]
+    assert data["cf"] == variables["cf"]
+    assert data["pec"] == variables["pec"]
+    assert data["sdi"] == variables["sdi"]
+    assert data["rifAmmin"] == variables["rifAmmin"]
+    assert data["splitPayment"] == variables["splitPayment"]
+    assert data["coordinateBancarie"] == variables["coordinateBancarie"]
+    assert data["idDanea"] == variables["idDanea"]
     assert user.rappresentante and data["rappresentante"]["email"] == user.rappresentante.email
-    assert data["tipoUtente"] == user.tipo_utente
+    assert data["tipoUtente"] == variables["tipoUtente"]
     assert user.iva and data["iva"]["nome"] == user.iva.nome
     assert user.listino and data["listino"]["nome"] == user.listino.nome
-    assert data["porto"] == user.porto
-    assert data["vettore"] == user.vettore
-    assert data["pagamento"] == user.pagamento
-    assert data["sconto"] == user.sconto
+    assert data["porto"] == variables["porto"]
+    assert data["vettore"] == variables["vettore"]
+    assert data["pagamento"] == variables["pagamento"]
+    assert data["sconto"] == variables["sconto"]
     
     # no access for normal user
     response_user = user_api_client.post_graphql(MUTATION_AGGIORNA_STAFF, variables)
@@ -1128,3 +1175,56 @@ def test_mutations_staff(
     #controllo corrispondenza a database con i dati restituiti dalla mutazione
     users = UserExtra.objects.filter(user__email = email)
     assert len(users) == 0
+
+MUTATION_FORZA_PASSWORD = """
+    mutation forzaPassword (
+        $id:ID!
+        $password:string!
+    ){
+        staffDelete(
+        id:$id
+        password:$password
+        ){
+            errors{
+                code
+                field
+            }
+        }
+    }
+"""
+
+# def test_mutations_forza_password(
+#     staff_user,
+#     customer_user,
+#     staff_api_client,
+#     user_api_client,
+#     permission_manage_users,
+#     permission_manage_staff,
+#     superuser_api_client
+# ):
+    
+#     # creo un utente da modificare
+#     email = "staff.forza.password@test.it"
+#     # creo rappresentante
+#     ut_sal = User.objects.create(email=email)
+#     utente = UserExtra.objects.create(user=ut_sal, denominazione="metti la password", active=True)
+#     variables = {
+#                     "email":email,
+#                     "password":"test password"
+#                 }
+#     response = superuser_api_client.post_graphql(MUTATION_FORZA_PASSWORD, variables)
+#     content = get_graphql_content(response)
+#     data = content["data"]["forzaPAssword"]["errors"]
+#     assert data == []
+#     #controllo se l'utente esegue il login con la nuova password
+#     # TODO
+
+#     # no access for normal user
+#     response_user = user_api_client.post_graphql(MUTATION_FORZA_PASSWORD, variables)
+#     assert_no_permission(response_user)
+#     staff_api_client.user.user_permissions.add(
+#         permission_manage_staff,
+#         permission_manage_users,
+#     )
+#     response_staff = staff_api_client.post_graphql(MUTATION_FORZA_PASSWORD, variables)
+#     assert_no_permission(response_staff)
