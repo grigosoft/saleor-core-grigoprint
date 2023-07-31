@@ -1,10 +1,8 @@
 import graphene
-from saleor.account.error_codes import AccountErrorCode
-from saleor.core.tracing import traced_atomic_transaction
 
 from saleor.graphql.core import ResolveInfo
 from django.core.exceptions import ValidationError
-from saleor.graphql.core.mutations import BaseMutation, ModelDeleteMutation, ModelMutation, ModelDeleteMutation
+from saleor.graphql.core.mutations import ModelDeleteMutation, ModelMutation, ModelDeleteMutation
 from saleor.graphql.account.i18n import I18nMixin
 from saleor.graphql.core.types.common import AccountError
 from saleor.permission.enums import AccountPermissions

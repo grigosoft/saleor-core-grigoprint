@@ -117,7 +117,7 @@ class ClientiFilterInput(FilterInputObjectType):
     class Meta:
         filterset_class = ClientiFilter
 
-class AccountQueries(graphene.ObjectType):
+class AccountExtraQueries(graphene.ObjectType):
     utente = PermissionsField(
         type.UserExtra,
         id=graphene.Argument(graphene.ID, description="ID of the user."),

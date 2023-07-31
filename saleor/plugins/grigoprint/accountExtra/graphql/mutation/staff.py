@@ -26,8 +26,14 @@ from saleor.account import events as account_events
 
 from saleor.graphql.core.enums import AccountErrorCode
 
-from saleor.graphql.account.mutations.staff import StaffCreateInput, StaffInput, AddressCreate, AddressUpdate, CustomerCreate, CustomerUpdate, StaffCreate, StaffUpdate, StaffUpdateInput
-from saleor.graphql.account.mutations.account import AccountError
+from saleor.graphql.account.mutations.staff.staff_create import StaffCreateInput, StaffCreate
+from saleor.graphql.account.mutations.staff.customer_update import CustomerCreate, CustomerUpdate
+from saleor.graphql.account.mutations.staff.staff_update import  StaffUpdate, StaffUpdateInput
+# from saleor.graphql.account.mutations.staff.address_create import AddressCreate
+# from saleor.graphql.account.mutations.staff.address_update import AddressUpdate
+
+from saleor.graphql.core.types.common import AccountError
+
 from saleor.graphql.account.mutations.base import (
     SHIPPING_ADDRESS_FIELD,
     BILLING_ADDRESS_FIELD,
