@@ -12,7 +12,7 @@ from .....graphql.core.types import (
 )
 from .....graphql.core.federation import federated_entity
 from .....graphql.core.connection import CountableConnection
-from .....graphql.core.enums import to_enum
+from ...util import to_enum
 
 # from .....graphql.decorators import permission_required
 # from .....core.permissions import AccountPermissions
@@ -22,6 +22,7 @@ from .....graphql.account.types import User, ObjectWithMetadata, UserCountableCo
 # from ...gestioneAzienda import models as gestioneAziendaModels
 from .. import models
 # from django.contrib.auth import models as auth_models
+
 
 
 TipoContattoEnum = to_enum(models.TipoContatto)
