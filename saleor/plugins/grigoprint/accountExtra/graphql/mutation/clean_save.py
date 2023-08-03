@@ -5,6 +5,7 @@ from saleor.graphql.account.types import User
 from django.core.exceptions import ValidationError
 
 from saleor.plugins.grigoprint.accountExtra.enum import TipoUtente
+from saleor.plugins.grigoprint.accountExtra.graphql.mutation.user import add_user_extra_search_document_value
 from ...util import isUserExtra, controllaOCreaUserExtra
 from ...models import Contatto, Iva, Listino
 from .... import util
@@ -108,6 +109,9 @@ def save_user_extra_base(user:"User", cleaned_data):
     user_extra.rif_ammin=cleaned_data.get("rif_ammin", "")
     user_extra.split_payment=cleaned_data.get("split_payment", False)
     user_extra.save()
+    #search vector
+    user_extra.user.search_document = add_user_extra_search_document_value(user_extra)
+    user_extra.user.save(update_fields=["search_document", "updated_at"])
         
 def save_user_extra(user:"User", cleaned_data):
     """salva le informazioni dell'UserExtra, NON i contatti, NON is rappresentante"""

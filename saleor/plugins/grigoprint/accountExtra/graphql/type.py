@@ -12,7 +12,7 @@ from .....graphql.core.types import (
 )
 from .....graphql.core.federation import federated_entity
 from .....graphql.core.connection import CountableConnection
-from ...util import to_enum
+from ...util import choices_to_enum
 
 # from .....graphql.decorators import permission_required
 # from .....core.permissions import AccountPermissions
@@ -25,10 +25,10 @@ from .. import models
 
 
 
-TipoContattoEnum = to_enum(models.TipoContatto)
-TipoVettoreEnum = to_enum(models.TipoVettore)
-TipoPortoEnum = to_enum(models.TipoPorto)
-TipoUtenteEnum = to_enum(models.TipoUtente)
+TipoContattoEnum = choices_to_enum(models.TipoContatto)
+TipoVettoreEnum = choices_to_enum(models.TipoVettore)
+TipoPortoEnum = choices_to_enum(models.TipoPorto)
+TipoUtenteEnum = choices_to_enum(models.TipoUtente)
 
 class Contatto(DjangoObjectType):
     user_extra = graphene.Field("saleor.plugins.grigoprint.accountExtra.graphql.type.UserExtra", required=True)

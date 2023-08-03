@@ -22,7 +22,7 @@ def random_phone() -> str:
 
 # ------- GRAPHENE
 
-def to_enum(enum_cls, *, type_name=None, **options) -> graphene.Enum:
+def choices_to_enum(enum_cls, *, type_name=None, **options) -> graphene.Enum:
     def description(choices, value) -> str:
         if not value:
             return ""
