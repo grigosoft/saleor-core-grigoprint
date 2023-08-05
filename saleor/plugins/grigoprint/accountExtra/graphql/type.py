@@ -68,7 +68,7 @@ class Iva(DjangoObjectType):
 
 
 class UserExtra(ModelObjectType[models.UserExtra]):
-    id = graphene.GlobalID(required=True, description="ID dell'oggetto User di saleor")
+    id = graphene.ID(required=True, description="ID dell'oggetto User di saleor")
     
     user = graphene.Field(User, description="Collegamento ad oggetto User di saleor")
     

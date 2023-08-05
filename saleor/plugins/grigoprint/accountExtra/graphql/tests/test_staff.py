@@ -91,11 +91,10 @@ CONTATTO_QUERY = """
 
 def test_query_utente_full(
     staff_api_client,
-    customer_user,
     permission_manage_users,
     permission_manage_orders,
 ):
-    user = customer_user
+    user = User.objects.create(email="customer1@test.it")
     #user extra
     UserExtra.objects.create(
         user = user,
@@ -121,7 +120,7 @@ def test_query_utente_full(
 
     query = FULL_USER_QUERY
     # ricreo l'id di graphene per individuare l'untente in graphene
-    ID = graphene.Node.to_global_id("User", customer_user.id)
+    ID = graphene.Node.to_global_id("User", user.pk)
     variables = {"id": ID}
     staff_api_client.user.user_permissions.add(
         permission_manage_users, permission_manage_orders
@@ -129,6 +128,7 @@ def test_query_utente_full(
     response = staff_api_client.post_graphql(query, variables)
     content = get_graphql_content(response)
     data = content["data"]["utente"]
+    assert data["id"] == ID
     assert data["email"] == user.email
     assert data["user"]["email"] == user.email
     assert data["denominazione"] == user.extra.denominazione
@@ -695,6 +695,19 @@ MUTATION_CANCELLA_CLIENTE = """
         }
     }
 """
+MUTATION_CANCELLA_CLIENTI = """
+    mutation customerBulkDelete (
+        $ids:ID!
+    ){
+        customerBulkDelete(ids:[$ids]){
+            errors{
+                field
+                message
+            }
+            count
+        }
+    }
+"""
 def test_mutations_cliente(
     staff_api_client,
     user_api_client,
@@ -835,6 +848,17 @@ def test_mutations_cliente(
     #controllo corrispondenza a database con i dati restituiti dalla mutazione
     users = UserExtra.objects.filter(user__email = email)
     assert len(users) == 0
+    #BULK DELETE
+    user = User.objects.create(email="bulk1@test.it")
+    userEx = UserExtra.objects.create(user=user, denominazione="test blulk delete")
+    users_pk = [graphene.Node.to_global_id("User", userEx.user.pk)]
+    users_id = ",".join(users_pk)
+    variables = {"ids": users_id}
+    response = staff_api_client.post_graphql(MUTATION_CANCELLA_CLIENTI, variables)
+    content = get_graphql_content(response)
+    data = content["data"]["customerBulkDelete"]
+    assert data["errors"] == []
+    assert data["count"] == 1
 
 
 MUTATION_CREA_STAFF = """
