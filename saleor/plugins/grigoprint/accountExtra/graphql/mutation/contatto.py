@@ -6,6 +6,7 @@ from saleor.graphql.core.mutations import ModelDeleteMutation, ModelMutation, Mo
 from saleor.graphql.account.i18n import I18nMixin
 from saleor.graphql.core.types.common import AccountError
 from saleor.permission.enums import AccountPermissions
+from saleor.plugins.grigoprint.accountExtra.graphql.util_rappresentante import accerta_user_extra_or_error
 from ....permissions import GrigoprintPermissions
 from ... import models
 from .. import type
@@ -32,7 +33,7 @@ class ContattoCrea(ModelMutation):
         )
     class Meta:
         description = "Creates a new contatto."
-        permissions = (AccountPermissions.MANAGE_USERS,GrigoprintPermissions.IS_RAPPRESENTANTE)
+        permissions = (AccountPermissions.MANAGE_USERS,)
         error_type_class = AccountError
         error_type_field = "account_errors"
         model = models.Contatto
@@ -49,7 +50,7 @@ class ContattoCrea(ModelMutation):
         
         user_id = data.get("user_id")
         user = cls.get_node_or_error(info, user_id, only_type=type.User)
-        clean_save.accerta_user_extra_or_error(user)
+        accerta_user_extra_or_error(user)
         cleaned_input["user_extra"] = user.extra
         clean_save.clean_contatto(user,cleaned_input,data)
         
@@ -64,7 +65,7 @@ class ContattoAggiorna(ModelMutation):
         )
     class Meta:
         description = "Creates a new contatto."
-        permissions = (AccountPermissions.MANAGE_USERS,GrigoprintPermissions.IS_RAPPRESENTANTE)
+        permissions = (AccountPermissions.MANAGE_USERS,)
         error_type_class = AccountError
         error_type_field = "account_errors"
         model = models.Contatto
@@ -83,7 +84,7 @@ class ContattoCancella(ModelDeleteMutation):
         
     class Meta:
         description = "Cancella un contatto."
-        permissions = (AccountPermissions.MANAGE_USERS,GrigoprintPermissions.IS_RAPPRESENTANTE)
+        permissions = (AccountPermissions.MANAGE_USERS,)
         error_type_class = AccountError
         error_type_field = "account_errors"
         model = models.Contatto

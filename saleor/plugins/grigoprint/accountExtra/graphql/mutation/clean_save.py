@@ -7,6 +7,8 @@ from django.core.exceptions import ValidationError
 from saleor.permission.enums import AccountPermissions
 from saleor.plugins.grigoprint.accountExtra.enum import TipoUtente
 from saleor.plugins.grigoprint.accountExtra.graphql.mutation.user import add_user_extra_search_document_value
+from saleor.plugins.grigoprint.accountExtra.graphql.util_rappresentante import accerta_rappresentante_or_error
+from saleor.plugins.grigoprint.permissions import GrigoprintPermissions
 from ...util import isUserExtra, controllaOCreaUserExtra
 from ...models import Contatto, Iva, Listino
 from .... import util
@@ -15,44 +17,6 @@ from .... import util
 PERMESSO_CAMPI_RAPPRESENTANTE=["commissione", "sconto"]
 PERMESSO_CAMPI_ADMIN=PERMESSO_CAMPI_RAPPRESENTANTE.extend(["id_danea", "is_rappresentante"]) #TODO completa la lista
 
-def accerta_user_extra_or_error(user:Optional["User"]) -> User:
-    if not user or not isUserExtra(user):
-        raise ValidationError(
-            {
-                "user": ValidationError(
-                    f"User: '{user}' non ha la parte Extra",
-                    code=AccountErrorCode.NOT_FOUND.value,
-                )
-            }
-        )
-    return user
-def accerta_rappresentante_or_error(user:Optional["User"])-> User:
-    user = accerta_user_extra_or_error(user)
-    if not user.extra.is_rappresentante:
-        raise ValidationError(
-            {
-                "user": ValidationError(
-                    f"User'{user}' non è un rappresentante",
-                    code=AccountErrorCode.INVALID.value,
-                )
-            }
-        )
-    return user
-def accerta_cliente_del_rappresentante_or_error(rappresentante:Optional["User"], cliente:Optional["User"]):
-    rappresentante = accerta_rappresentante_or_error(rappresentante)
-    cliente = accerta_user_extra_or_error(cliente)
-    is_cliente = rappresentante.clienti.filter(id=cliente.id).first()
-
-    if not is_cliente:
-        raise ValidationError(
-            {
-                "user": ValidationError(
-                    f"Cliente'{cliente}' non è un cliente associato a '{rappresentante}'",
-                    code=AccountErrorCode.INVALID.value,
-                )
-            }
-        )
-    return
 
 def clean_contatto(user:"User", cleaned_input, data):
     
@@ -83,6 +47,12 @@ def save_is_rappresentante(user:"User", cleaned_data):
     user.extra.save()#only_fields=["is_rappresentante","commissione"])
 
 def clean_assegna_rappresentante(cls, info, user:"User", cleaned_input):
+    """
+    casistiche assegna rappresentante:
+    permessi: manage_users (per forza)
+    + se il requestor è rappresentante, può assegnare solo se stesso
+    + se il requestor ha il permesso di gestire i rappresentanti: manage_rappresentanti
+    """
     rappresentante_id = cleaned_input.get("rappresentante_id", None)
     if rappresentante_id:
         requestor = info.context.user
@@ -91,7 +61,7 @@ def clean_assegna_rappresentante(cls, info, user:"User", cleaned_input):
             accerta_rappresentante_or_error(rappresentante)
             if (
                 (requestor.extra.is_rappresentante and requestor.id == rappresentante.id) or 
-                (not requestor.extra.is_rappresentante and requestor.has_perm(AccountPermissions.MANAGE_USERS))
+                requestor.has_perm(GrigoprintPermissions.MANAGE_RAPPRESENTANTI)
                 ):
                 cleaned_input["rappresentante"] = rappresentante
                 
@@ -99,7 +69,7 @@ def clean_assegna_rappresentante(cls, info, user:"User", cleaned_input):
                 raise ValidationError(
                     {
                         "user": ValidationError(
-                            f"User'{requestor}' può assegnare solo se stesso o deve avere il permesso '{AccountPermissions.MANAGE_USERS}'",
+                            f"User'{requestor}' può assegnare solo se stesso o deve avere il permesso '{GrigoprintPermissions.MANAGE_RAPPRESENTANTI}'",
                             code=AccountErrorCode.INVALID.value,
                         )
                     }

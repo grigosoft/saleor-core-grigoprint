@@ -42,6 +42,7 @@ from saleor.graphql.account.mutations.base import (
     UserInput,
 )
 from django.core.exceptions import ValidationError
+from saleor.plugins.grigoprint.accountExtra.graphql.util_rappresentante import accerta_user_extra_or_error
 
 from saleor.plugins.grigoprint.permissions import GrigoprintPermissions
 
@@ -74,7 +75,7 @@ class AssegnaRappresentante(BaseMutation):
     @classmethod
     def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
         cleaned_input = super().clean_input(info, instance, data, **kwargs)
-        clean_save.accerta_user_extra_or_error(instance)
+        accerta_user_extra_or_error(instance)
         # controllo se l'ID è di un rappresentante
         clean_save.clean_assegna_rappresentante(cls,info,instance,cleaned_input)
         return cleaned_input
@@ -177,7 +178,7 @@ class ClienteAggiorna(CustomerUpdate):
     def save(cls, info: ResolveInfo, instance, cleaned_input):
         super().save(info, instance, cleaned_input)
         cleaned_input_extra = cleaned_input["extra"]
-        clean_save.accerta_user_extra_or_error(instance)
+        accerta_user_extra_or_error(instance)
         # salvo le informazioni in userExtra
         clean_save.save_user_extra(instance, cleaned_input_extra)
         clean_save.save_assegna_rappresentante(instance, cleaned_input_extra)
@@ -282,7 +283,7 @@ class StaffAggiorna(StaffUpdate):
     def save(cls, info: ResolveInfo, user, cleaned_input, send_notification=True):
         super().save(info, user, cleaned_input, send_notification)
         cleaned_input_extra = cleaned_input["extra"]
-        clean_save.accerta_user_extra_or_error(user)
+        accerta_user_extra_or_error(user)
         # salvo le informazioni in userExtra
         clean_save.save_user_extra(user, cleaned_input_extra)
         # clean_save.save_assegna_rappresentante(user, cleaned_input_extra)

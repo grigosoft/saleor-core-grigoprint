@@ -8,4 +8,4 @@ from saleor.permission.enums import BasePermissionEnum
 # quando si aggiora guardare se cambia posto
 
 class GrigoprintPermissions(BasePermissionEnum):
-    IS_RAPPRESENTANTE = "grigoprint.is_rappresentante" 
+    MANAGE_RAPPRESENTANTI = "grigoprint.manage_rappresentanti" 

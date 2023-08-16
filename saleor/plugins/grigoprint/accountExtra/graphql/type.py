@@ -83,7 +83,7 @@ class UserExtra(ModelObjectType[models.UserExtra]):
 
     is_rappresentante = PermissionsField(graphene.Boolean, permissions=[AccountPermissions.MANAGE_USERS, AccountPermissions.MANAGE_STAFF])
     rappresentante = graphene.Field(User, description="Rappresentante assegnato a questo utente/cliente")
-    commissione = PermissionsField(graphene.Float, permissions=[AccountPermissions.MANAGE_USERS, AccountPermissions.MANAGE_STAFF, GrigoprintPermissions.IS_RAPPRESENTANTE])
+    commissione = PermissionsField(graphene.Float, permissions=[AccountPermissions.MANAGE_USERS, AccountPermissions.MANAGE_STAFF])
 
     #dati azienda
     piva = graphene.String()
@@ -99,7 +99,7 @@ class UserExtra(ModelObjectType[models.UserExtra]):
     porto = TipoPortoEnum()
     vettore = TipoVettoreEnum()
     pagamento = graphene.String()
-    listino = graphene.Field(Listino, description="listino di questo cliente")
+    listino = PermissionsField(Listino, description="listino di questo cliente", permissions=[AccountPermissions.MANAGE_USERS, AccountPermissions.MANAGE_STAFF])
     sconto = graphene.Float()
 
     contatti = NonNullList(Contatto, description="List of all user's contacts.")

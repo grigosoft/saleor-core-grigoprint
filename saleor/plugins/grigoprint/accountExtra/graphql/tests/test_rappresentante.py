@@ -2,9 +2,13 @@ import graphene
 import pytest
 
 from saleor.graphql.tests.utils import assert_no_permission, get_graphql_content
+from saleor.permission.models import Permission
 from saleor.plugins.grigoprint.accountExtra.models import UserExtra, User
+from saleor.plugins.grigoprint.permissions import GrigoprintPermissions
 
-
+# @pytest.fixture
+# def permission_manage_rappresentanti():
+#     return Permission.objects.get(codename="manage_rappresentanti")
 
 # ------- QUERY
 
@@ -153,7 +157,8 @@ def test_mutantion_crea_cliente_rappresentante(
     staff_api_client,
     user_api_client,
     staff_user,
-    permission_manage_users
+    permission_manage_users,
+    # permission_manage_rappresentanti
 ):
     staff_api_client.user.user_permissions.add(
         permission_manage_users
@@ -220,6 +225,25 @@ def test_mutantion_crea_cliente_rappresentante(
     print("creo assegnando un altro rappresentante, io NON sono rappresentante")
     requester.is_rappresentante = False
     requester.save()
+    variables = {
+                    "email":"utente.crea.4@test.it",
+                    "denominazione":"den test 4",
+                    "rappresentanteId":rappresentante_id_2
+                }
+    response = staff_api_client.post_graphql(MUTATION_CREA_CLIENTE, variables)
+    content = get_graphql_content(response)
+    print("\t", content["data"]["clienteCrea"])
+    data = content["data"]["clienteCrea"]["errors"]
+    assert len(data) >= 1
+    assert data[0]["field"] == "user"
+
+    # test creazione cliente:
+    print("creo assegnando un altro rappresentante, io NON sono rappresentante ma ho i permessi")
+    requester.is_rappresentante = False
+    requester.save()
+    staff_api_client.user.user_permissions.add(
+        Permission.objects.get(codename="manage_rappresentanti")
+    )
     variables = {
                     "email":"utente.crea.4@test.it",
                     "denominazione":"den test 4",
