@@ -1117,7 +1117,7 @@ def test_mutations_staff(
     assert data["splitPayment"] == variables["splitPayment"]
     assert data["coordinateBancarie"] == variables["coordinateBancarie"]
     assert data["idDanea"] == variables["idDanea"]
-    assert user.rappresentante and data["rappresentante"]["email"] == user.rappresentante.email
+    assert not user.rappresentante
     assert data["tipoUtente"] == variables["tipoUtente"]
     assert user.iva and data["iva"]["nome"] == user.iva.nome
     assert user.listino and data["listino"]["nome"] == user.listino.nome
@@ -1177,7 +1177,7 @@ def test_mutations_staff(
     assert data["splitPayment"] == variables["splitPayment"]
     assert data["coordinateBancarie"] == variables["coordinateBancarie"]
     assert data["idDanea"] == variables["idDanea"]
-    assert user.rappresentante and data["rappresentante"]["email"] == user.rappresentante.email
+    assert not user.rappresentante
     assert data["tipoUtente"] == variables["tipoUtente"]
     assert user.iva and data["iva"]["nome"] == user.iva.nome
     assert user.listino and data["listino"]["nome"] == user.listino.nome

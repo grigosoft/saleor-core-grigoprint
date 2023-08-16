@@ -39,60 +39,60 @@ from . import type
 
 @traced_resolver
 def resolve_user_con_rappresentante(info, id=None, email=None, external_reference=None):
-    saleor_resolver = resolve_user(info, id, email, external_reference)
-    if not isinstance(saleor_resolver, PermissionDenied):
-        if isUserExtra(saleor_resolver):
-            return saleor_resolver.extra
-        else:
-            raise AccountError("l'untente selezionato non ha l'extra")
-    # se ha dato errore vedo se ha i permessi come rappresentante
-    requester = info.context.user
+    requester = get_user_or_app_from_context(info.context)
     if requester:
-        requester_extra = get_user_extra_or_None(requester)
-        if requester_extra:
-            filter_kwargs = {}
-            if id:
-                _model, filter_kwargs["pk"] = from_global_id_or_error(id, type.User)
-            if email:
-                filter_kwargs["email"] = email
-            
-            if requester.has_perm( GrigoprintPermissions.IS_RAPPRESENTANTE ):
-                
-                filter_kwargs["rappresentante"] = requester_extra.rappresentante
-                user = models.User.objects.customers().filter(**filter_kwargs).first()
-                if isUserExtra(user):
-                    return user.extra
-                else:
-                    raise AccountError("l'untente selezionato non ha l'extra")
-        
+        filter_kwargs = {}
+        if id:
+            _model, filter_kwargs["pk"] = from_global_id_or_error(id, type.User)
+        if email:
+            filter_kwargs["email"] = email
+        if external_reference:
+            filter_kwargs["external_reference"] = external_reference
+        if requester.has_perms(
+            [AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS]
+        ):
+            return models.UserExtra.objects.filter(**filter_kwargs).first()
+        if requester.has_perm(AccountPermissions.MANAGE_STAFF):
+            return models.UserExtra.objects.staff().filter(**filter_kwargs).first()
+        if has_one_of_permissions(
+            requester, [AccountPermissions.MANAGE_USERS, OrderPermissions.MANAGE_ORDERS]
+        ):
+            rappresentante = info.context.user.extra if isUserExtra(info.context.user) and info.context.user.extra.is_rappresentante else None # type: ignore
+            return models.UserExtra.objects.clienti(rappresentante).filter(**filter_kwargs).first()
     return PermissionDenied(
         permissions=[
             AccountPermissions.MANAGE_STAFF,
             AccountPermissions.MANAGE_USERS,
             OrderPermissions.MANAGE_ORDERS,
-            GrigoprintPermissions.IS_RAPPRESENTANTE,
         ]
     )
+    
+    
 
 @traced_resolver
 def resolve_users_con_rappresentante(info, ids=None, emails=None):
-    requester = info.context.user
-
-    saleor_resolver = resolve_users(info)
-    # se il risultato è se stesso, allora è loggato ma non ha permessi per gli utenti, controllo se è un rappresentante
-    if not (len(saleor_resolver) == 1 and saleor_resolver.first().id == requester.id):
-        return saleor_resolver
-
+    """
+    copia con aggiunta di filtro per rappresentante della funzione
+    'resolve_users' in saleor.graphql.account.resolvers.py
+    """
+    requester = get_user_or_app_from_context(info.context)
+    if not requester:
+        return models.UserExtra.objects.none()
     
-
-    requester_extra = get_user_extra_or_None(requester)
-    if not requester_extra:
-        return models.User.objects.none()
     
-    if requester.has_perm(GrigoprintPermissions.IS_RAPPRESENTANTE):
-        qs = requester_extra.clienti
-
+    if requester.has_perms(
+        [AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS]
+    ):
+        qs = models.UserExtra.objects.all()
+    elif requester.has_perm(AccountPermissions.MANAGE_STAFF):
+        qs = models.UserExtra.objects.staff()
+    elif requester.has_perm(AccountPermissions.MANAGE_USERS):
+        # controllo se il richiedente è un rappresentante
+        rappresentante = info.context.user.extra if isUserExtra(info.context.user) and info.context.user.extra.is_rappresentante else None # type: ignore
+        qs = models.UserExtra.objects.clienti(rappresentante) # se non None, filtro i clienti legati al rappresentante
     elif requester.id:
+        # If user has no access to all users, we can only return themselves, but
+        # only if they are authenticated and one of requested users
         qs = models.User.objects.filter(id=requester.id)
     else:
         qs = models.User.objects.none()
@@ -106,8 +106,15 @@ def resolve_users_con_rappresentante(info, ids=None, emails=None):
         return qs.filter(id__in=ids)
     return qs.filter(email__in=emails)
 
-def resolve_clienti(_info):
-    return models.UserExtra.objects.clienti()
+
+
+def resolve_clienti_con_rappresentante(info):
+    user = info.context.user
+    # se l'utente è un rappresentate senza altri permessi, mostro solo i suoi clienti
+    if user and isUserExtra(user) and user.extra.is_rappresentante:
+        return user.clienti
+    else:
+        return models.UserExtra.objects.clienti()
 
 
 def resolve_staff(_info):
@@ -128,7 +135,6 @@ class AccountExtraQueries(graphene.ObjectType):
             AccountPermissions.MANAGE_STAFF,
             AccountPermissions.MANAGE_USERS,
             OrderPermissions.MANAGE_ORDERS,
-            GrigoprintPermissions.IS_RAPPRESENTANTE,
         ],
         description="Look up a user by ID or email address.",
     )
@@ -138,9 +144,8 @@ class AccountExtraQueries(graphene.ObjectType):
         filter=ClientiFilterInput(description="Filtering options for customers."),
         sort_by=UserExtraSortingInput(description="Sort customers."),
         permissions=[
-            OrderPermissions.MANAGE_ORDERS, 
-            AccountPermissions.MANAGE_USERS, 
-            GrigoprintPermissions.IS_RAPPRESENTANTE
+            OrderPermissions.MANAGE_ORDERS,
+            AccountPermissions.MANAGE_USERS,
         ],
     )
     
@@ -200,13 +205,7 @@ class AccountExtraQueries(graphene.ObjectType):
         return resolve_user_con_rappresentante(info, id, email, external_reference)
     @staticmethod
     def resolve_clienti(_root, info: ResolveInfo, **kwargs):
-        user = info.context.user
-        # se l'utente è un rappresentate senza altri permessi, mostro solo i suoi clienti
-        # TODO user.has_perm(GrigoprintPermissions.IS_RAPPRESENTANTE)
-        if user and isUserExtra(user) and user.extra.is_rappresentante and not user.has_perms(perm_list=[AccountPermissions.MANAGE_STAFF,AccountPermissions.MANAGE_USERS]):
-            qs = user.clienti
-        else:
-            qs = resolve_clienti(info)
+        qs = resolve_clienti_con_rappresentante(info)
         qs = filter_connection_queryset(qs, kwargs)
         return create_connection_slice(qs, info, kwargs, type.UserExtraCountableConnection)
     @staticmethod

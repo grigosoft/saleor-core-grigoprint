@@ -114,7 +114,7 @@ class ClienteCrea(CustomerCreate):
         exclude = ["password","is_rappresentante","commissione"]
         model = models.User
         object_type = type.User
-        permissions = (AccountPermissions.MANAGE_USERS, GrigoprintPermissions.IS_RAPPRESENTANTE,) # TODO permessi rappresentante
+        permissions = (AccountPermissions.MANAGE_USERS,) # TODO permessi rappresentante
         error_type_class = AccountError
         error_type_field = "account_errors"
 
@@ -129,6 +129,7 @@ class ClienteCrea(CustomerCreate):
         return cleaned_input
 
     @classmethod
+    @traced_atomic_transaction()
     def save(cls, info: ResolveInfo, instance, cleaned_input):
         super().save(info, instance, cleaned_input)
         cleaned_input_extra = cleaned_input["extra"]
@@ -157,7 +158,7 @@ class ClienteAggiorna(CustomerUpdate):
         object_type = type.User
         description = "Updates an existing customer."
         exclude = ["password","is_rappresentante","commissione"]
-        permissions = (AccountPermissions.MANAGE_USERS, GrigoprintPermissions.IS_RAPPRESENTANTE,)
+        permissions = (AccountPermissions.MANAGE_USERS,)
         error_type_class = AccountError
         error_type_field = "account_errors"
 
@@ -172,6 +173,7 @@ class ClienteAggiorna(CustomerUpdate):
         return cleaned_input
 
     @classmethod
+    @traced_atomic_transaction()
     def save(cls, info: ResolveInfo, instance, cleaned_input):
         super().save(info, instance, cleaned_input)
         cleaned_input_extra = cleaned_input["extra"]
@@ -218,23 +220,25 @@ class StaffCrea(StaffCreate):
 
     @classmethod
     def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
+        data.pop("rappresentante_id",None) # ignoro questo input
         cleaned_input = super().clean_input(info, instance, data, **kwargs)
         cleaned_input_extra = cleaned_input["extra"]
         cleaned_input_extra["is_staff"] = True
         clean_save.clean_user_extra(instance, cleaned_input_extra, data)
-        clean_save.clean_assegna_rappresentante(cls, info, instance, cleaned_input_extra)
+        # clean_save.clean_assegna_rappresentante(cls, info, instance, cleaned_input_extra)
         clean_save.clean_is_rappresentante(instance, cleaned_input_extra,data)
         # cleaned_input["tipo_utente"] = TipoUtente.PRIVATO
         return cleaned_input
         
     @classmethod
+    @traced_atomic_transaction()
     def save(cls, info: ResolveInfo, user, cleaned_input, send_notification=True):
         super().save(info, user, cleaned_input, send_notification)
         cleaned_input_extra = cleaned_input["extra"]
         clean_save.controllaOCreaUserExtra(user)
         # salvo le informazioni in userExtra
         clean_save.save_user_extra(user, cleaned_input_extra)
-        clean_save.save_assegna_rappresentante(user, cleaned_input_extra)
+        # clean_save.save_assegna_rappresentante(user, cleaned_input_extra)
         clean_save.save_is_rappresentante(user,cleaned_input)
     
     @classmethod
@@ -260,25 +264,28 @@ class StaffAggiorna(StaffUpdate):
         permissions = (AccountPermissions.MANAGE_USERS,)
         error_type_class = AccountError
         error_type_field = "account_errors"
+    
     @classmethod
     def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
+        data.pop("rappresentante_id",None) # ignoro questo input
         cleaned_input = super().clean_input(info, instance, data, **kwargs)
         cleaned_input_extra = cleaned_input["extra"]
         cleaned_input_extra["is_staff"] = True
         clean_save.clean_user_extra(instance, cleaned_input_extra, data)
-        clean_save.clean_assegna_rappresentante(cls, info, instance, cleaned_input_extra)
+        # clean_save.clean_assegna_rappresentante(cls, info, instance, cleaned_input_extra)
         clean_save.clean_is_rappresentante(instance, cleaned_input_extra,data)
         # cleaned_input["tipo_utente"] = TipoUtente.PRIVATO
         return cleaned_input
         
     @classmethod
+    @traced_atomic_transaction()
     def save(cls, info: ResolveInfo, user, cleaned_input, send_notification=True):
         super().save(info, user, cleaned_input, send_notification)
         cleaned_input_extra = cleaned_input["extra"]
         clean_save.accerta_user_extra_or_error(user)
         # salvo le informazioni in userExtra
         clean_save.save_user_extra(user, cleaned_input_extra)
-        clean_save.save_assegna_rappresentante(user, cleaned_input_extra)
+        # clean_save.save_assegna_rappresentante(user, cleaned_input_extra)
         clean_save.save_is_rappresentante(user,cleaned_input)
     
     @classmethod

@@ -1,6 +1,7 @@
 
 from django.db import models
 from django.db.models import Q, Exists, OuterRef, UniqueConstraint
+from typing import Union
 
 from saleor.order.models import Order
 
@@ -31,12 +32,17 @@ class UserExtraManager(models.Manager["UserExtra"]):
     # def userExtrafromUser(self, user):
     #     return self.get_queryset().filter(user=user.id).first()
 
-    def clienti(self):
-        orders = Order.objects.values("user_id")
-        return self.get_queryset().filter(
-            Q(user__is_staff=False)
-            | (Q(user__is_staff=True) & (Exists(orders.filter(user_id=OuterRef("user__pk")))))
-        )
+    def clienti(self, rappresentante:Union["UserExtra",None] = None):
+        if rappresentante:
+            clienti = rappresentante.clienti
+        else:
+            orders = Order.objects.values("user_id")
+            clienti = self.get_queryset().filter(
+                Q(user__is_staff=False)
+                | (Q(user__is_staff=True) & (Exists(orders.filter(user_id=OuterRef("user__pk")))))
+            )
+
+        return clienti
 
 class UserExtra(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="extra", primary_key=True)
@@ -59,7 +65,7 @@ class UserExtra(models.Model):
     #nome_rappresentante = models.CharField(max_length=256, blank=True) # nel caso si cancellasse il riferimento esterno al rappresentante
     commissione = models.FloatField(default=0,null=False, blank=True)
     # dati azienda
-    piva = models.TextField(null=True, blank=True, unique=True)
+    piva = models.TextField(null=True, blank=True, unique=True, default=None)
     cf = models.TextField(null=True, blank=True, unique=True)
     pec = models.EmailField(null=True, blank=True)
     sdi = models.TextField(null=True, blank=True)

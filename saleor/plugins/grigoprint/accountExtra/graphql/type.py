@@ -199,23 +199,3 @@ class UserExtraCountableConnection(UserCountableConnection):
     class Meta:
         node = UserExtra
         
-        
-# @key(fields="id")
-# class Gruppo(Group):
-#     users = graphene.List(UserExtra, description="List of group users")
-
-#     class Meta:
-#         description = "Represents permission group data."
-#         interfaces = [graphene.relay.Node]
-#         model = auth_models.Group
-#         only_fields = ["name", "permissions", "id"]
-
-#     @staticmethod
-#     @permission_required(AccountPermissions.MANAGE_STAFF)
-#     def resolve_users(root: auth_models.Group, _info):
-#         users = root.user_set.all()
-#         usersExtra = []
-#         for user in users:
-#             if hasattr(user, 'extra'):
-#                 usersExtra = user.extra
-#         return usersExtra

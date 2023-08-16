@@ -4,6 +4,7 @@ from saleor.account.error_codes import AccountErrorCode
 from saleor.graphql.account.types import User
 from django.core.exceptions import ValidationError
 
+from saleor.permission.enums import AccountPermissions
 from saleor.plugins.grigoprint.accountExtra.enum import TipoUtente
 from saleor.plugins.grigoprint.accountExtra.graphql.mutation.user import add_user_extra_search_document_value
 from ...util import isUserExtra, controllaOCreaUserExtra
@@ -84,9 +85,34 @@ def save_is_rappresentante(user:"User", cleaned_data):
 def clean_assegna_rappresentante(cls, info, user:"User", cleaned_input):
     rappresentante_id = cleaned_input.get("rappresentante_id", None)
     if rappresentante_id:
-        rappresentante = cls.get_node_or_error(info, rappresentante_id, only_type=User)
-        accerta_rappresentante_or_error(rappresentante)
-        cleaned_input["rappresentante"] = rappresentante
+        requestor = info.context.user
+        if requestor:
+            rappresentante = cls.get_node_or_error(info, rappresentante_id, only_type=User)
+            accerta_rappresentante_or_error(rappresentante)
+            if (
+                (requestor.extra.is_rappresentante and requestor.id == rappresentante.id) or 
+                (not requestor.extra.is_rappresentante and requestor.has_perm(AccountPermissions.MANAGE_USERS))
+                ):
+                cleaned_input["rappresentante"] = rappresentante
+                
+            else:
+                raise ValidationError(
+                    {
+                        "user": ValidationError(
+                            f"User'{requestor}' può assegnare solo se stesso o deve avere il permesso '{AccountPermissions.MANAGE_USERS}'",
+                            code=AccountErrorCode.INVALID.value,
+                        )
+                    }
+                )
+        else:
+            raise ValidationError(
+                    {
+                        "user": ValidationError(
+                            f"Requestor '{requestor}' deve essere un istanza di User",
+                            code=AccountErrorCode.INVALID.value,
+                        )
+                    }
+                )
 
 def save_assegna_rappresentante(user:"User", cleaned_data):
     rappresentante = cleaned_data.get("rappresentante", None)
@@ -101,8 +127,8 @@ def save_user_extra_base(user:"User", cleaned_data):
     user_extra = user.extra
     user_extra.denominazione=cleaned_data["denominazione"]
         # user_extra.tipo_utente=cleaned_data["tipo_utente"]
-    user_extra.piva=cleaned_data.get("piva", "")
-    user_extra.cf=cleaned_data.get("cf", "")
+    user_extra.piva=cleaned_data.get("piva", None)
+    user_extra.cf=cleaned_data.get("cf", None)
     user_extra.pec=cleaned_data.get("pec", "")
     user_extra.sdi=cleaned_data.get("sdi", "")
     user_extra.coordinate_bancarie=cleaned_data.get("coordinate_bancarie", "")
@@ -117,7 +143,7 @@ def save_user_extra(user:"User", cleaned_data):
     """salva le informazioni dell'UserExtra, NON i contatti, NON is rappresentante"""
     save_user_extra_base(user, cleaned_data)
     user_extra = user.extra
-    user_extra.id_danea = cleaned_data.get("id_danea", "")
+    user_extra.id_danea = cleaned_data.get("id_danea", None)
     user_extra.tipo_utente = cleaned_data.get("tipo_utente", TipoUtente.AZIENDA)
     user_extra.iva = cleaned_data.get("iva", None)
     user_extra.porto = cleaned_data.get("porto", "")
