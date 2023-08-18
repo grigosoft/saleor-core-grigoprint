@@ -28,7 +28,7 @@ def is_cliente_del_rappresentante(
         rappresentante:Optional["User"], 
         cliente:Optional["User"]
         )-> bool:
-    if is_rappresentante(rappresentante) and is_user_extra(cliente):
-        return rappresentante.extra.clienti.filter(id=cliente.id).first() # type: ignore
+    if is_rappresentante(rappresentante) and is_user_extra(cliente) and cliente.extra.rappresentante: # type: ignore
+        return cliente.extra.rappresentante.pk == rappresentante.pk # type: ignore
 
     return False

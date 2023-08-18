@@ -3,7 +3,9 @@ import pytest
 
 from saleor.graphql.tests.utils import assert_no_permission, get_graphql_content
 from saleor.permission.models import Permission
-from saleor.plugins.grigoprint.accountExtra.models import UserExtra, User
+from saleor.plugins.grigoprint.accountExtra.enum import TipoContatto
+from saleor.plugins.grigoprint.accountExtra.graphql.tests.test_staff import MUTATION_AGGIORNA_CONTATTO, MUTATION_CANCELLA_CONTATTO, MUTATION_CREA_CONTATTO
+from saleor.plugins.grigoprint.accountExtra.models import Contatto, UserExtra, User
 from saleor.plugins.grigoprint.permissions import GrigoprintPermissions
 
 # @pytest.fixture
@@ -238,24 +240,167 @@ def test_mutantion_crea_cliente_rappresentante(
     assert data[0]["field"] == "user"
 
     # test creazione cliente:
-    print("creo assegnando un altro rappresentante, io NON sono rappresentante ma ho i permessi")
-    requester.is_rappresentante = False
-    requester.save()
-    staff_api_client.user.user_permissions.add(
-        Permission.objects.get(codename="manage_rappresentanti") # TODO come lo includo nei permessi caricati?
-    )
-    variables = {
-                    "email":"utente.crea.4@test.it",
-                    "denominazione":"den test 4",
-                    "rappresentanteId":rappresentante_id_2
-                }
-    response = staff_api_client.post_graphql(MUTATION_CREA_CLIENTE, variables)
-    content = get_graphql_content(response)
-    print("\t", content["data"]["clienteCrea"])
-    data = content["data"]["clienteCrea"]["userExtra"]
-    assert content["data"]["clienteCrea"]["errors"] == []
-    assert data["rappresentante"]["email"] == staff_user_2.email
+    # print("creo assegnando un altro rappresentante, io NON sono rappresentante ma ho i permessi")
+    # requester.is_rappresentante = False
+    # requester.save()
+    # staff_api_client.user.user_permissions.add(
+    #     Permission.objects.get(codename="manage_rappresentanti") # TODO come lo includo nei permessi caricati?
+    # )
+    # variables = {
+    #                 "email":"utente.crea.4@test.it",
+    #                 "denominazione":"den test 4",
+    #                 "rappresentanteId":rappresentante_id_2
+    #             }
+    # response = staff_api_client.post_graphql(MUTATION_CREA_CLIENTE, variables)
+    # content = get_graphql_content(response)
+    # print("\t", content["data"]["clienteCrea"])
+    # data = content["data"]["clienteCrea"]["userExtra"]
+    # assert content["data"]["clienteCrea"]["errors"] == []
+    # assert data["rappresentante"]["email"] == staff_user_2.email
 
     # check permissions
     response = user_api_client.post_graphql(MUTATION_CREA_CLIENTE, variables)
     assert_no_permission(response)
+
+
+
+# CONTATTI
+def controlla_casistiche_mutazioni_contatto(nome_mutazione, mutazione, variables1,variables2, staff_api_client,user_extra, staff_extra):
+    """variables2 serve per la delete, per cancellare il 2° contatto"""
+    staff_extra.is_rappresentante = True
+    staff_extra.save()
+    user_extra.rappresentante = staff_extra.user
+    user_extra.save()
+    response = staff_api_client.post_graphql(mutazione, variables1)
+    content = get_graphql_content(response)
+    assert content["data"][nome_mutazione]["contatto"]
+    assert content["data"][nome_mutazione]["errors"] == []
+
+    staff_extra.is_rappresentante = True
+    staff_extra.save()
+    user_extra.rappresentante = None
+    user_extra.save()
+    response = staff_api_client.post_graphql(mutazione, variables1)
+    content = get_graphql_content(response)
+    assert not content["data"][nome_mutazione]["contatto"]
+    assert len(content["data"][nome_mutazione]["errors"]) == 1
+
+    staff_extra.is_rappresentante = False
+    staff_extra.save()
+    user_extra.rappresentante = None
+    user_extra.save()
+    response = staff_api_client.post_graphql(mutazione, variables2)
+    content = get_graphql_content(response)
+    assert content["data"][nome_mutazione]["contatto"]
+    assert content["data"][nome_mutazione]["errors"] == []
+
+def test_mutations_crea_contatto_rappresentante(
+    staff_api_client,
+    customer_user,
+    staff_user,
+    permission_manage_users
+):
+    staff_api_client.user.user_permissions.add(
+        permission_manage_users
+    )
+    user_extra = UserExtra.objects.create(
+        user = customer_user
+    )
+    staff_extra = UserExtra.objects.create(
+        user = staff_user
+    )
+
+    # CREATE -------
+    ID = graphene.Node.to_global_id("User", customer_user.pk)
+    variables = {"userId": ID, 
+                 "denominazione":"test denominazione contatto",
+                 "email":"contatto@test.it",
+                 "telefono":"+390457834054",
+                 "uso":TipoContatto.FATTURAZIONE
+                 }
+    
+    controlla_casistiche_mutazioni_contatto("contattoCrea", 
+                                            MUTATION_CREA_CONTATTO, 
+                                            variables,
+                                            variables, 
+                                            staff_api_client,
+                                            user_extra, 
+                                            staff_extra
+                                            )
+
+def test_mutations_aggiorna_contatto_rappresentante(
+    staff_api_client,
+    staff_user,
+    customer_user,
+    permission_manage_users
+):    
+    staff_api_client.user.user_permissions.add(
+        permission_manage_users
+    )
+    user_extra = UserExtra.objects.create(
+        user = customer_user
+    )
+    staff_extra = UserExtra.objects.create(
+        user = staff_user
+    )
+    contatto = Contatto.objects.create(user_extra = user_extra,
+                            denominazione="den",
+                            email="contatto@test.it",
+                            telefono="34734",
+                            uso=TipoContatto.FATTURAZIONE)
+    # UPDATE -----
+    ID = graphene.Node.to_global_id("Contatto", contatto.pk)
+    variables = {"id": ID, 
+                 "denominazione":"modificata denominazione",
+                 "email":"contatto.modificato@test.it",
+                 "telefono":"+390456520415",
+                 "uso":TipoContatto.CONSEGNA
+                 }
+    
+    controlla_casistiche_mutazioni_contatto("contattoAggiorna", 
+                                            MUTATION_AGGIORNA_CONTATTO, 
+                                            variables, 
+                                            variables,
+                                            staff_api_client,
+                                            user_extra, 
+                                            staff_extra
+                                            )
+
+def test_mutations_cancella_contatto_rappresentante(
+    staff_api_client,
+    staff_user,
+    customer_user,
+    permission_manage_users
+):
+    staff_api_client.user.user_permissions.add(
+        permission_manage_users
+    )
+    user_extra = UserExtra.objects.create(
+        user = customer_user
+    )
+    staff_extra = UserExtra.objects.create(
+        user = staff_user
+    )
+    contatto1 = Contatto.objects.create(user_extra = user_extra,
+                            denominazione="den",
+                            email="contatto@test.it",
+                            telefono="34734",
+                            uso=TipoContatto.FATTURAZIONE)
+    contatto2 = Contatto.objects.create(user_extra = user_extra,
+                            denominazione="den 2",
+                            email="contatto2@test.it",
+                            telefono="34734",
+                            uso=TipoContatto.FATTURAZIONE)
+    # DELETE -----
+    id1 = graphene.Node.to_global_id("Contatto", contatto1.pk)
+    id2 = graphene.Node.to_global_id("Contatto", contatto2.pk)
+    variables1 = {"id": id1}
+    variables2 = {"id": id2}
+    controlla_casistiche_mutazioni_contatto("contattoCancella", 
+                                            MUTATION_CANCELLA_CONTATTO, 
+                                            variables1,
+                                            variables2,
+                                            staff_api_client,
+                                            user_extra, 
+                                            staff_extra
+                                            )

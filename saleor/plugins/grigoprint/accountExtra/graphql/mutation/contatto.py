@@ -88,7 +88,6 @@ class ContattoCancella(ModelDeleteMutation):
         model = models.Contatto
         object_type = type.Contatto
     @classmethod
-    def clean_instance(cls, _info: ResolveInfo, _instance, /):
-        # TODO logica permessi rappresentante-cliente
-        print("TODO logica permessi rappresentante-cliente")
-        pass
+    def clean_instance(cls, info: ResolveInfo, instance, /):
+        clean_save.clean_contatto(cls, info, instance.user_extra.user, None,None)
+        
