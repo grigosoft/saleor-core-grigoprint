@@ -2,7 +2,7 @@ from saleor.account.models import User
 from .models import UserExtra
 from typing import Optional
 
-def isUserExtra(user:Optional[User]) -> bool:
+def is_user_extra(user:Optional[User]) -> bool:
     """Return Boolean
     controlla se l'utente ha la parte extra, intercettaneo le eccezzioni"""
     if not user:
@@ -13,10 +13,22 @@ def isUserExtra(user:Optional[User]) -> bool:
     except UserExtra.DoesNotExist or User.DoesNotExist:
         return False
         
-def controllaOCreaUserExtra(user: "User"):
-    if not isUserExtra(user):
+def controlla_o_crea_userextra(user: "User"):
+    if not is_user_extra(user):
         print("creato un user senza extra, lo aggiungo")
         userExtra = UserExtra.objects.create(user=user)
         userExtra.save()
         user.extra = userExtra # type: ignore #TODO serve??
         user.save()
+
+def is_rappresentante(user:Optional[User]) -> bool:
+    return is_user_extra(user) and user.extra.is_rappresentante # type: ignore
+
+def is_cliente_del_rappresentante(
+        rappresentante:Optional["User"], 
+        cliente:Optional["User"]
+        )-> bool:
+    if is_rappresentante(rappresentante) and is_user_extra(cliente):
+        return rappresentante.extra.clienti.filter(id=cliente.id).first() # type: ignore
+
+    return False

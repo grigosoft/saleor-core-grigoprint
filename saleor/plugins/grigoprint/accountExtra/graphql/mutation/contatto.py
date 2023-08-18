@@ -1,13 +1,11 @@
 import graphene
 
 from saleor.graphql.core import ResolveInfo
-from django.core.exceptions import ValidationError
 from saleor.graphql.core.mutations import ModelDeleteMutation, ModelMutation, ModelDeleteMutation
 from saleor.graphql.account.i18n import I18nMixin
 from saleor.graphql.core.types.common import AccountError
 from saleor.permission.enums import AccountPermissions
-from saleor.plugins.grigoprint.accountExtra.graphql.util_rappresentante import accerta_user_extra_or_error
-from ....permissions import GrigoprintPermissions
+from saleor.plugins.grigoprint.accountExtra.graphql.util import accerta_user_extra_or_error
 from ... import models
 from .. import type
 from . import clean_save
@@ -52,7 +50,7 @@ class ContattoCrea(ModelMutation):
         user = cls.get_node_or_error(info, user_id, only_type=type.User)
         accerta_user_extra_or_error(user)
         cleaned_input["user_extra"] = user.extra
-        clean_save.clean_contatto(user,cleaned_input,data)
+        clean_save.clean_contatto(cls, info,user,cleaned_input,data)
         
         return cleaned_input
     
@@ -74,7 +72,7 @@ class ContattoAggiorna(ModelMutation):
     def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
         cleaned_input = super().clean_input(info, instance, data, **kwargs)
         
-        clean_save.clean_contatto(instance.user_extra.user,cleaned_input,data)
+        clean_save.clean_contatto(cls, info, instance.user_extra.user, cleaned_input,data)
         
         return cleaned_input
 

@@ -42,7 +42,8 @@ from saleor.graphql.account.mutations.base import (
     UserInput,
 )
 from django.core.exceptions import ValidationError
-from saleor.plugins.grigoprint.accountExtra.graphql.util_rappresentante import accerta_user_extra_or_error
+from saleor.plugins.grigoprint.accountExtra.graphql.util import accerta_user_extra_or_error
+from saleor.plugins.grigoprint.accountExtra.util import controlla_o_crea_userextra
 
 from saleor.plugins.grigoprint.permissions import GrigoprintPermissions
 
@@ -134,7 +135,7 @@ class ClienteCrea(CustomerCreate):
     def save(cls, info: ResolveInfo, instance, cleaned_input):
         super().save(info, instance, cleaned_input)
         cleaned_input_extra = cleaned_input["extra"]
-        clean_save.controllaOCreaUserExtra(instance)
+        controlla_o_crea_userextra(instance)
         # salvo le informazioni in userExtra
         clean_save.save_user_extra(instance, cleaned_input_extra)
         clean_save.save_assegna_rappresentante(instance, cleaned_input_extra)
@@ -236,7 +237,7 @@ class StaffCrea(StaffCreate):
     def save(cls, info: ResolveInfo, user, cleaned_input, send_notification=True):
         super().save(info, user, cleaned_input, send_notification)
         cleaned_input_extra = cleaned_input["extra"]
-        clean_save.controllaOCreaUserExtra(user)
+        controlla_o_crea_userextra(user)
         # salvo le informazioni in userExtra
         clean_save.save_user_extra(user, cleaned_input_extra)
         # clean_save.save_assegna_rappresentante(user, cleaned_input_extra)

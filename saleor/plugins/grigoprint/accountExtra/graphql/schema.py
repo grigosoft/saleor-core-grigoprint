@@ -23,7 +23,7 @@ from .....graphql.account.resolvers import (
     resolve_staff_users,
     resolve_user,
 )
-from ..util import isUserExtra
+from ..util import is_user_extra
 from .....graphql.core.validators import validate_one_of_args_is_in_query
 from .sorters import UserExtraSortingInput
 from .filters import ClientiFilter
@@ -57,7 +57,7 @@ def resolve_user_con_rappresentante(info, id=None, email=None, external_referenc
         if has_one_of_permissions(
             requester, [AccountPermissions.MANAGE_USERS, OrderPermissions.MANAGE_ORDERS]
         ):
-            rappresentante = info.context.user.extra if isUserExtra(info.context.user) and info.context.user.extra.is_rappresentante else None # type: ignore
+            rappresentante = info.context.user.extra if is_user_extra(info.context.user) and info.context.user.extra.is_rappresentante else None # type: ignore
             return models.UserExtra.objects.clienti(rappresentante).filter(**filter_kwargs).first()
     return PermissionDenied(
         permissions=[
@@ -88,7 +88,7 @@ def resolve_users_con_rappresentante(info, ids=None, emails=None):
         qs = models.UserExtra.objects.staff()
     elif requester.has_perm(AccountPermissions.MANAGE_USERS):
         # controllo se il richiedente è un rappresentante
-        rappresentante = info.context.user.extra if isUserExtra(info.context.user) and info.context.user.extra.is_rappresentante else None # type: ignore
+        rappresentante = info.context.user.extra if is_user_extra(info.context.user) and info.context.user.extra.is_rappresentante else None # type: ignore
         qs = models.UserExtra.objects.clienti(rappresentante) # se non None, filtro i clienti legati al rappresentante
     elif requester.id:
         # If user has no access to all users, we can only return themselves, but
@@ -111,7 +111,7 @@ def resolve_users_con_rappresentante(info, ids=None, emails=None):
 def resolve_clienti_con_rappresentante(info):
     user = info.context.user
     # se l'utente è un rappresentate senza altri permessi, mostro solo i suoi clienti
-    if user and isUserExtra(user) and user.extra.is_rappresentante:
+    if user and is_user_extra(user) and user.extra.is_rappresentante:
         return user.clienti
     else:
         return models.UserExtra.objects.clienti()

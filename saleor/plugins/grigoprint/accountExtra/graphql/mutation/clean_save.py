@@ -3,13 +3,14 @@ from typing import Optional
 from saleor.account.error_codes import AccountErrorCode
 from saleor.graphql.account.types import User
 from django.core.exceptions import ValidationError
+from saleor.graphql.core import ResolveInfo
 
 from saleor.permission.enums import AccountPermissions
 from saleor.plugins.grigoprint.accountExtra.enum import TipoUtente
 from saleor.plugins.grigoprint.accountExtra.graphql.mutation.user import add_user_extra_search_document_value
-from saleor.plugins.grigoprint.accountExtra.graphql.util_rappresentante import accerta_rappresentante_or_error
+from saleor.plugins.grigoprint.accountExtra.graphql.util import accerta_rappresentante_or_error, accerta_cliente_del_rappresentante_or_error, is_rappresentante
 from saleor.plugins.grigoprint.permissions import GrigoprintPermissions
-from ...util import isUserExtra, controllaOCreaUserExtra
+# from ...util import isUserExtra, controllaOCreaUserExtra
 from ...models import Contatto, Iva, Listino
 from .... import util
 
@@ -18,19 +19,11 @@ PERMESSO_CAMPI_RAPPRESENTANTE=["commissione", "sconto"]
 PERMESSO_CAMPI_ADMIN=PERMESSO_CAMPI_RAPPRESENTANTE.extend(["id_danea", "is_rappresentante"]) #TODO completa la lista
 
 
-def clean_contatto(user:"User", cleaned_input, data):
+def clean_contatto(cls, info: ResolveInfo, user:"User", cleaned_input, data):
+    requestor = info.context.user
+    if is_rappresentante(requestor):
+        accerta_cliente_del_rappresentante_or_error(requestor, user)
     
-    # TODO controllo permessi da rappresentante
-    print("TODO logica permessi rappresentante-cliente")
-    # if not instance.has_perm(AccountPermissions.MANAGE_USERS):
-    #     rappresentante = info.context.user
-    #     if not rappresentante:
-    #         raise ValidationError({
-    #             "user": ValidationError(
-    #                 "le App non posso accedere",
-    #                 code=AccountErrorCode.INVALID.value,
-    #             )})
-    #     clean_save.accerta_cliente_del_rappresentante_or_error(rappresentante, user)
 
 # def clean_contatti(user:"User", cleaned_input, data_contatti):
 #     for data_contatto in data_contatti:

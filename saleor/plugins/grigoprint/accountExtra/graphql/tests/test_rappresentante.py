@@ -222,7 +222,7 @@ def test_mutantion_crea_cliente_rappresentante(
 
     # test creazione cliente: creo assegnando un altro rappresentante, 
     # io NON sono rappresentante
-    print("creo assegnando un altro rappresentante, io NON sono rappresentante")
+    print("creo assegnando un altro rappresentante, io NON sono rappresentante e NON ho i permessi")
     requester.is_rappresentante = False
     requester.save()
     variables = {
@@ -242,7 +242,7 @@ def test_mutantion_crea_cliente_rappresentante(
     requester.is_rappresentante = False
     requester.save()
     staff_api_client.user.user_permissions.add(
-        Permission.objects.get(codename="manage_rappresentanti")
+        Permission.objects.get(codename="manage_rappresentanti") # TODO come lo includo nei permessi caricati?
     )
     variables = {
                     "email":"utente.crea.4@test.it",
