@@ -28,7 +28,10 @@ def is_cliente_del_rappresentante(
         rappresentante:Optional["User"], 
         cliente:Optional["User"]
         )-> bool:
-    if is_rappresentante(rappresentante) and is_user_extra(cliente) and cliente.extra.rappresentante: # type: ignore
-        return cliente.extra.rappresentante.pk == rappresentante.pk # type: ignore
-
+    if is_rappresentante(rappresentante) and is_user_extra(cliente):
+        if cliente.extra.rappresentante: # type: ignore
+            return cliente.extra.rappresentante.pk == rappresentante.pk # type: ignore
+        else:
+            # controllo se è se stesso, tutti sono rappresentanti di se stessi
+            return cliente.pk == rappresentante.pk # type: ignore
     return False

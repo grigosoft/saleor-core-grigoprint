@@ -20,8 +20,6 @@ from saleor.graphql.tests.utils import (
     assert_graphql_error_with_message,
     assert_no_permission,
     get_graphql_content,
-    get_graphql_content_from_response,
-    get_multipart_request_body,
 )
 from saleor.permission.enums import AccountPermissions
 
@@ -91,6 +89,7 @@ CONTATTO_QUERY = """
 
 def test_query_utente_full(
     staff_api_client,
+    user_api_client,
     permission_manage_users,
     permission_manage_orders,
 ):
@@ -154,6 +153,10 @@ def test_query_utente_full(
     # assert len(data["contatti"]) == user.extra.contatti.count()
     # for contatto in data["contatti"]:
     #     contatto_id =  contatto["id"]
+
+    # no access for normal user
+    response_user = user_api_client.post_graphql(MUTATION_CANCELLA_CONTATTO, variables)
+    assert_no_permission(response_user)
 
 def test_query_utente_minimum(
     staff_api_client,
@@ -288,6 +291,7 @@ def test_query_staff_utenti(
 
 def test_query_contatto(
     staff_api_client,
+    user_api_client,
     customer_user,
     permission_manage_users,
     permission_manage_orders
@@ -319,6 +323,9 @@ def test_query_contatto(
     assert data["userExtra"]["email"] == contatto1.user_extra.user.email
     assert data["telefono"] == contatto1.telefono
     assert data["uso"] == contatto1.uso
+    # no access for normal user
+    response_user = user_api_client.post_graphql(MUTATION_CANCELLA_CONTATTO, variables)
+    assert_no_permission(response_user)
     
 
 # ------------------------------------------------------- MUTATIONS

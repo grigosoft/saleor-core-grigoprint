@@ -1,6 +1,7 @@
 # richiamare in saleor.graphql.api
 
 
+from saleor.plugins.grigoprint.preventivo.graphql.schema import PreventivoQueries
 from .accountExtra.graphql.mutation import AccountExtraMutation
 from .accountExtra.graphql.schema import AccountExtraQueries
 from .prodottoPersonalizzato.graphql.schema import ProdottoPersonalizzatoQueries
@@ -10,6 +11,7 @@ from .prodottoPersonalizzato.graphql.mutations import ProdottoPersonalizzatoMuta
 
 class GrigoprintQueries(
     AccountExtraQueries,
+    PreventivoQueries,
     # GestioneAziendaQueries,
     # ProdottoPersonalizzatoQueries,
 ):

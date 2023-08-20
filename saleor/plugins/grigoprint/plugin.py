@@ -1,7 +1,7 @@
 
 from typing import Any
 from saleor.account.models import User
-from .accountExtra.util import controllaOCreaUserExtra
+from .accountExtra.util import controlla_o_crea_userextra
 from ..base_plugin import BasePlugin
 from prices import TaxedMoney
 
@@ -15,9 +15,9 @@ class GrigoprintPlugin(BasePlugin):
 
     #
     def customer_created(self, customer: "User", previous_value: Any) -> Any:
-        controllaOCreaUserExtra(customer)
+        controlla_o_crea_userextra(customer)
     def staff_created(self, staff: "User", previous_value: Any) -> Any:
-        controllaOCreaUserExtra(staff)
+        controlla_o_crea_userextra(staff)
 
     ### calcola prezzi con prodotto personalizzato
     def calculate_checkout_line_unit_price(checkoutInfo, linesInfo, address, discount, other)->TaxedMoney:
