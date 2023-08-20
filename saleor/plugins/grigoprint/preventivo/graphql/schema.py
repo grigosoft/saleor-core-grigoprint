@@ -1,6 +1,8 @@
 from django.forms import ValidationError
 import graphene
 from django.db.models import Q
+from saleor.graphql.checkout.resolvers import resolve_checkouts
+from saleor.graphql.core.connection import create_connection_slice, filter_connection_queryset
 from saleor.graphql.core.utils import from_global_id_or_error
 from saleor.graphql.core.validators import validate_one_of_args_is_in_query
 from saleor.plugins.grigoprint.accountExtra.graphql.util import accerta_cliente_del_rappresentante_or_error
@@ -28,6 +30,9 @@ class PreventivoQueries(graphene.ObjectType):
     preventivi = FilterConnectionField(
         type.PreventivoCountableConnection,
         description="Lista completa di prevetivi, in base a chi è loggato",
+        channel=graphene.String(
+            description="Slug of a channel for which the data should be returned."
+        ),
         #filter=PreventiviFilterInput(description="Filtro Preventivi"),
         #sort_by=PreventiviSortingInput(description="Ordinamento Preventivi"),
         permissions=[
@@ -54,14 +59,17 @@ class PreventivoQueries(graphene.ObjectType):
         return preventivo
     
     @staticmethod
-    def resolve_preventivi(
-        _root, info: ResolveInfo,
-    ):
+    def resolve_preventivi(_root, info: ResolveInfo, *, channel=None, **kwargs):
+        qs = Preventivo.objects.all()
+        if channel:
+            queryset = qs.filter(checkout__channel__slug=channel)
         requestor = info.context.user
         if requestor:
             if is_rappresentante(requestor):
-                return Preventivo.objects.filter(checkout__user__extra__rappresentante=requestor)
-            else:
-                return Preventivo.objects.all()
+                qs.filter(checkout__user__extra__rappresentante=requestor)
         else:
             raise ValidationError("solo un utente può richiedere questa query")
+        
+
+        qs = filter_connection_queryset(qs, kwargs)
+        return create_connection_slice(qs, info, kwargs, type.PreventivoCountableConnection)
