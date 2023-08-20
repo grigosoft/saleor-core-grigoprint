@@ -9,8 +9,6 @@ from .....graphql.core.types import (
 from .....graphql.core.connection import CountableConnection
 
 
-from .....graphql.account.types import User
-
 from .. import models
 
 
@@ -33,7 +31,8 @@ class Preventivo(ModelObjectType[models.Preventivo]):
 
     @staticmethod
     def resolve_id(root: models.Preventivo, _info, **_kwargs):
-        return graphene.Node.to_global_id("Preventivo", root.checkout.pk)
+        return graphene.Node.to_global_id("Checkout", root.checkout.pk)
+    
     @staticmethod
     def resolve_number(root: models.Preventivo, _info, **_kwargs):
         return "{root.anno}/{root.number}"

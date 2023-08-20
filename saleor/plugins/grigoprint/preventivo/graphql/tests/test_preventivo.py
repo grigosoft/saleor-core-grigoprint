@@ -9,14 +9,19 @@ PREVENTIVO_QUERY = """
     query Preventivo($id: ID!) {
         preventivo(id: $id) {
             id
-            checkout
+            stato
+            checkout{
+                id
+                user{
+                    email
+                }
+            }
             number
-            precedente
         }
     }
 """
 
-def test_query_utente_full(
+def test_query_preventivo(
     staff_api_client,
     user_api_client,
     checkout,
@@ -26,8 +31,8 @@ def test_query_utente_full(
     
 
     query = PREVENTIVO_QUERY
-    # ricreo l'id di graphene per individuare l'untente in graphene
-    ID = graphene.Node.to_global_id("Preventivo", preventivo.pk)
+    # ricreo l'id di graphene per individuare il Preventivo in graphene
+    ID = graphene.Node.to_global_id("Checkout", checkout.pk)
     variables = {"id": ID}
     staff_api_client.user.user_permissions.add(
         permission_manage_checkouts

@@ -1,6 +1,8 @@
 from django.forms import ValidationError
 import graphene
 from django.db.models import Q
+from saleor.graphql.core.utils import from_global_id_or_error
+from saleor.graphql.core.validators import validate_one_of_args_is_in_query
 from saleor.plugins.grigoprint.accountExtra.graphql.util import accerta_cliente_del_rappresentante_or_error
 
 from saleor.plugins.grigoprint.accountExtra.util import is_cliente_del_rappresentante, is_rappresentante
@@ -15,7 +17,7 @@ from . import type
 class PreventivoQueries(graphene.ObjectType):
     preventivo = PermissionsField(
         type.Preventivo,
-        id=graphene.Argument(graphene.ID, description="ID del preventivo."),
+        id=graphene.Argument(graphene.ID, description="ID del Checkout collegato al preventivo."),
         
         permissions=[
             OrderPermissions.MANAGE_ORDERS,
@@ -37,14 +39,18 @@ class PreventivoQueries(graphene.ObjectType):
     
     @staticmethod
     def resolve_preventivo(
-        _root, info: ResolveInfo, id=None
+        _root, info: ResolveInfo, id
     ):
-        preventivo = Preventivo.objects.filter(id=id).first()
-
-        requestor = info.context.user
-        cliente = preventivo.checkout.user # type: ignore
-        if is_rappresentante(requestor):
-            accerta_cliente_del_rappresentante_or_error(requestor, cliente)
+        validate_one_of_args_is_in_query("id", id)
+        # preventivo = Preventivo.objects.filter(checkout_id=id).first()
+        # sembra che saleor tenga solo il token come primary key e bisogna cercare tramite quello
+        _, token = from_global_id_or_error(id, only_type="Checkout")
+        preventivo = Preventivo.objects.filter(checkout__token=token).first()
+        if preventivo:
+            requestor = info.context.user
+            cliente = preventivo.checkout.user
+            if is_rappresentante(requestor):
+                accerta_cliente_del_rappresentante_or_error(requestor, cliente)
         return preventivo
     
     @staticmethod
