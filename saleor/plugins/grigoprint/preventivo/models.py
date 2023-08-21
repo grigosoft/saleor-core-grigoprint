@@ -1,4 +1,6 @@
 import datetime
+from decimal import Decimal
+from django.conf import settings
 from django.db import models, connection
 from django.core.validators import MinValueValidator
 from saleor.checkout.models import Checkout, CheckoutLine
@@ -10,7 +12,11 @@ def get_numero_preventivo():
     with connection.cursor() as cursor:
         cursor.execute("SELECT nextval('preventivo_preventivo_number_seq')")
         result = cursor.fetchone()
-        return result[0]
+        if result:
+            return result[0]
+        else:
+            raise ConnectionError("Select a DB della sequenza preventivo fallita.", cursor.db.errors_occurred)
+    
 def get_anno():
     currentDateTime = datetime.datetime.now()
     date = currentDateTime.date()
@@ -64,11 +70,12 @@ class Preventivo(models.Model):
             )
         ]
 
+    @property
     def is_checkout(self)->bool:
         return self.stato == StatoPreventivo.CHECKOUT
-    
+    @property
     def is_preventivo(self)->bool:
-        return not self.is_checkout()
+        return not self.is_checkout
     # TODO sendHistory (quando si invia un preventivo si registra una copia di quello inviato)
 
 class PreventivoLine(models.Model):
@@ -84,5 +91,11 @@ class PreventivoLine(models.Model):
     )
     #visibile
     
+    descrizione_forzata = models.TextField(null=True, blank=True)
+    prezzo_netto_forzato = models.DecimalField(
+        max_digits=settings.DEFAULT_MAX_DIGITS,
+        decimal_places=settings.DEFAULT_DECIMAL_PLACES,
+        null=True,blank=True
+    )
     sconto = models.FloatField(default=0)
     # iva = models.FloatField()

@@ -111,8 +111,8 @@ class TessutoCancella(ModelDeleteMutation):
 class TessutoStampatoInput(graphene.InputObjectType):
     tipo_stampa = graphene.ID(required=True)
     tessuto = graphene.ID(required=True)
-    velocita_stampa = graphene.Decimal()
-    velocita_calandra = graphene.Decimal()
+    velocita_stampa = graphene.Float()
+    velocita_calandra = graphene.Float()
     carta_protezione = graphene.Int()
     note = graphene.String()
 

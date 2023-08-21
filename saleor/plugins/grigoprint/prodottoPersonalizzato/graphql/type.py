@@ -1,3 +1,4 @@
+import graphene
 from graphene_django import DjangoObjectType
 
 from .. import models
@@ -15,6 +16,10 @@ class Tessuto(DjangoObjectType):
         fields = "__all__"
 
 class TessutoStampato(DjangoObjectType):
+    # in graphene i numeri non possono essere tipo Decimal, solo FLOAT!
+    velocita_stampa = graphene.Float()
+    velocita_calandra = graphene.Float()
+
     class Meta:
         description = "Collegamento tra Tessuto e Stampa"
         model = models.TessutoStampato

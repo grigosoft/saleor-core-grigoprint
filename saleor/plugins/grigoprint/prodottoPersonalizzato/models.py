@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.db import models
+from django.conf import settings
 
 from saleor.plugins.grigoprint.accountExtra.models import UserExtra
 

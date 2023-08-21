@@ -8,7 +8,9 @@ from saleor.graphql.core.validators import validate_one_of_args_is_in_query
 from saleor.plugins.grigoprint.accountExtra.graphql.util import accerta_cliente_del_rappresentante_or_error
 
 from saleor.plugins.grigoprint.accountExtra.util import is_cliente_del_rappresentante, is_rappresentante
+from saleor.plugins.grigoprint.preventivo.filters import PreventivoFilterInput
 from saleor.plugins.grigoprint.preventivo.models import Preventivo
+from saleor.plugins.grigoprint.preventivo.sorters import PreventivoSortingInput
 
 from .....graphql.core import ResolveInfo
 from .....graphql.core.fields import FilterConnectionField, PermissionsField
@@ -33,8 +35,8 @@ class PreventivoQueries(graphene.ObjectType):
         channel=graphene.String(
             description="Slug of a channel for which the data should be returned."
         ),
-        #filter=PreventiviFilterInput(description="Filtro Preventivi"),
-        #sort_by=PreventiviSortingInput(description="Ordinamento Preventivi"),
+        filter=PreventivoFilterInput(description="Filtro Preventivi"),
+        sort_by=PreventivoSortingInput(description="Ordinamento Preventivi"),
         permissions=[
             OrderPermissions.MANAGE_ORDERS,
             CheckoutPermissions.MANAGE_CHECKOUTS,
@@ -62,7 +64,7 @@ class PreventivoQueries(graphene.ObjectType):
     def resolve_preventivi(_root, info: ResolveInfo, *, channel=None, **kwargs):
         qs = Preventivo.objects.all()
         if channel:
-            queryset = qs.filter(checkout__channel__slug=channel)
+            qs = qs.filter(checkout__channel__slug=channel)
         requestor = info.context.user
         if requestor:
             if is_rappresentante(requestor):
