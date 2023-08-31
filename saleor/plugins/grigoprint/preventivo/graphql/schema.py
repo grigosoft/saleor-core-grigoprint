@@ -35,7 +35,7 @@ class PreventivoQueries(graphene.ObjectType):
         channel=graphene.String(
             description="Slug of a channel for which the data should be returned."
         ),
-        filter=PreventivoFilterInput(description="Filtro Preventivi"),
+        filter=PreventivoFilterInput(),
         sort_by=PreventivoSortingInput(description="Ordinamento Preventivi"),
         permissions=[
             OrderPermissions.MANAGE_ORDERS,

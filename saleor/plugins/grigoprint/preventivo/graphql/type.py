@@ -39,7 +39,7 @@ class PreventivoLine(ModelObjectType[models.PreventivoLine]):
 class Preventivo(ModelObjectType[models.Preventivo]):
     id = graphene.ID(required=True, description="ID dell'oggetto Checkout di saleor")
     checkout = graphene.Field(Checkout,description="Collegamento ad oggetto Checkout di saleor")
-    number = graphene.String(description="anno + id incrementale")
+    numero = graphene.String(description="anno + id incrementale")
     
     lines = NonNullList(
         PreventivoLine,
@@ -62,9 +62,6 @@ class Preventivo(ModelObjectType[models.Preventivo]):
     def resolve_id(root: models.Preventivo, _info, **_kwargs):
         return graphene.Node.to_global_id("Checkout", root.checkout.pk)
     
-    @staticmethod
-    def resolve_number(root: models.Preventivo, _info, **_kwargs):
-        return "{root.anno}/{root.number}"
 
 class PreventivoCountableConnection(CountableConnection):
     class Meta:

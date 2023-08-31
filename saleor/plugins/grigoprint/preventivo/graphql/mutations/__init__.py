@@ -1,5 +1,9 @@
+from .preventivo import PreventivoCrea, PreventivoCancella
+
+
 class PreventivoMutation():
     # STAFF ----------
 
-    # tipo_stampa_crea = TipoStampaCrea.Field()
+    preventivo_crea = PreventivoCrea.Field()
+    preventivo_cancella = PreventivoCancella.Field()
     pass

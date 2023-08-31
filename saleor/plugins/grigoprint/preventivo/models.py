@@ -9,8 +9,15 @@ from saleor.plugins.grigoprint.accountExtra.models import UserExtra
 from saleor.plugins.grigoprint.prodottoPersonalizzato.models import ProdottoPersonalizzato
 
 def get_numero_preventivo():
+    reset = False
+    ultimo_preventivo = Preventivo.objects.last()
+    if not ultimo_preventivo or ultimo_preventivo.anno < get_anno():
+        reset = True
     with connection.cursor() as cursor:
-        cursor.execute("SELECT nextval('preventivo_preventivo_number_seq')")
+        if reset:
+            cursor.execute("SELECT setval('preventivo_preventivo_number_seq',1)")
+        else:
+            cursor.execute("SELECT nextval('preventivo_preventivo_number_seq')")
         result = cursor.fetchone()
         if result:
             return result[0]
@@ -44,7 +51,7 @@ class Preventivo(models.Model):
     objects = PreventivoManager()
 
     checkout = models.OneToOneField(Checkout, on_delete=models.CASCADE, related_name="extra", primary_key=True)
-    number = models.IntegerField(unique=True, default=get_numero_preventivo, editable=False)
+    number = models.IntegerField(default=get_numero_preventivo, editable=False)
     anno = models.PositiveSmallIntegerField(default=get_anno, editable=False)
 
     stato = models.CharField(max_length=1, choices=StatoPreventivo.CHOICES, default=StatoPreventivo.CHECKOUT)
@@ -63,7 +70,7 @@ class Preventivo(models.Model):
         null=True, blank=True
     )
     class Meta:
-        ordering = ("-number",)
+        ordering = ("-anno","-number",)
         constraints = [
             models.UniqueConstraint(
                 fields=['number', 'anno'], name='unique_preventivo_number_anno'
@@ -76,6 +83,9 @@ class Preventivo(models.Model):
     @property
     def is_preventivo(self)->bool:
         return not self.is_checkout
+    @property
+    def numero(self)->str:
+        return f"{self.anno}/{self.number}"
     # TODO sendHistory (quando si invia un preventivo si registra una copia di quello inviato)
 
 class PreventivoLine(models.Model):

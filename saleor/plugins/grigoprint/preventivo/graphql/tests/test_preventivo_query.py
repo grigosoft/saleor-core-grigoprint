@@ -6,6 +6,8 @@ from saleor.graphql.tests.utils import get_graphql_content, assert_no_permission
 
 from saleor.plugins.grigoprint.preventivo.models import Preventivo, StatoPreventivo
 
+
+
 PREVENTIVO_QUERY = """
     query Preventivo($id: ID!) {
         preventivo(id: $id) {
@@ -17,7 +19,7 @@ PREVENTIVO_QUERY = """
                     email
                 }
             }
-            number
+            numero
             precedente{
                 id
             }
@@ -62,6 +64,7 @@ PREVENTIVI_QUERY = """
                 node{
                     id
                     stato
+                    numero
                     checkout{
                                 id
                     }
