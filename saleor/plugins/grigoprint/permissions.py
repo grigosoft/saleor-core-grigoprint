@@ -1,5 +1,4 @@
 
-        
 from saleor.permission.enums import BasePermissionEnum
 
 

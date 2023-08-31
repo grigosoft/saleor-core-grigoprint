@@ -1,4 +1,5 @@
 import graphene
+from saleor.graphql.core import ResolveInfo
 
 from saleor.graphql.core.mutations import ModelDeleteMutation, ModelMutation
 from saleor.graphql.core.types.common import ProductError
@@ -131,7 +132,7 @@ class TessutoStampatoCrea(ModelMutation):
         error_type_field = "product_errors"
 
     @classmethod
-    def clean_input(cls, info: graphene.ResolveInfo, instance, data, *, input_cls=None):
+    def clean_input(cls, info: ResolveInfo, instance, data, *, input_cls=None):
         tipo_stampa_id = data.pop("tipo_stampa")
         tessuto_id = data.pop("tessuto")
         cleaned_input = super().clean_input(info, instance, data)
