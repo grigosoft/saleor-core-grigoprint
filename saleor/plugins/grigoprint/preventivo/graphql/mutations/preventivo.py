@@ -24,9 +24,9 @@ class PreventivoCreaInput(CheckoutCreateInput):
     lines = NonNullList( # Solo per required=False
         CheckoutLineInput,
         description=(
-            "A list of checkout lines, each containing information about "
-            "an item in the checkout."
-        )
+            "NON USARE!"
+        ),
+        required=False,
     )
 
 class PreventivoCrea(CheckoutCreate):

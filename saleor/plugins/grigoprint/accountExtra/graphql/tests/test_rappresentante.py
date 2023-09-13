@@ -4,7 +4,7 @@ import pytest
 from saleor.graphql.tests.utils import assert_no_permission, get_graphql_content
 from saleor.permission.models import Permission
 from saleor.plugins.grigoprint.accountExtra.enum import TipoContatto
-from saleor.plugins.grigoprint.accountExtra.graphql.tests.test_staff import MUTATION_AGGIORNA_CONTATTO, MUTATION_CANCELLA_CONTATTO, MUTATION_CREA_CONTATTO
+from saleor.plugins.grigoprint.accountExtra.graphql.tests.test_staff import MUTATION_AGGIORNA_CONTATTO, MUTATION_CANCELLA_CONTATTO, MUTATION_CREA_CONTATTO, CONTATTO_QUERY, CO
 from saleor.plugins.grigoprint.accountExtra.models import Contatto, UserExtra, User
 from saleor.plugins.grigoprint.permissions import GrigoprintPermissions
 
@@ -37,7 +37,6 @@ def test_query_clienti_rappresentante(
     permission_manage_users,
     staff_user
 ):
-    query = QUERY_CLIENTI
     staff_api_client.user.user_permissions.add(
         permission_manage_users
     )
@@ -57,7 +56,7 @@ def test_query_clienti_rappresentante(
     
     # faccio la richiesta con graphql: da un rappresentante
     response = staff_api_client.post_graphql(
-        query, {}
+        QUERY_CLIENTI, {}
     )
     content = get_graphql_content(response)
     data = content["data"]["clienti"]["edges"]
@@ -68,7 +67,7 @@ def test_query_clienti_rappresentante(
     rappresentante.is_rappresentante = False
     rappresentante.save()
     response = staff_api_client.post_graphql(
-        query, {}
+        QUERY_CLIENTI, {}
     )
     content = get_graphql_content(response)
     data = content["data"]["clienti"]["edges"]
@@ -76,9 +75,71 @@ def test_query_clienti_rappresentante(
     assert all([not user["node"]["user"]["isStaff"] for user in data])
     
     # check permissions
-    response = user_api_client.post_graphql(query, {})
+    response = user_api_client.post_graphql(QUERY_CLIENTI, {})
     assert_no_permission(response)
 
+def test_query_contatti_rappresentante(
+    staff_api_client,
+    user_api_client,
+    permission_manage_users,
+    staff_user,
+    customer_user
+):
+    staff_api_client.user.user_permissions.add(
+        permission_manage_users
+    )
+    # creo rappresentante
+    rappresentante = UserExtra.objects.create(user=staff_user,is_rappresentante = True)
+    user_extra = UserExtra.objects.create(user=customer_user)
+    contatto1 = Contatto.objects.create(
+        user_extra = user_extra,
+        denominazione = "antonio grigolini",
+        telefono = "3473462414",
+        uso = TipoContatto.FATTURAZIONE,
+        email = "grig.griganto@gmail.com"
+    )
+    contatto2 = Contatto.objects.create(
+        user_extra = user_extra,
+        denominazione = "antonio grigolini 2",
+        telefono = "3518882958",
+        uso = TipoContatto.CONSEGNA,
+        email = "griganto.games@gmail.com"
+    )
+    # il test senza utenti non funziona, da 0 clienti, 'staff_user' non è a database?
+    
+    # creo gli utententi nel db
+    staff1 = User.objects.create(email="staff1@test.it", is_staff=True)
+    UserExtra.objects.create(user=staff1)
+    user1 = User.objects.create(email="user1@test.it", is_staff=False)
+    UserExtra.objects.create(user=user1)
+    user2 = User.objects.create(email="user2@test.it", is_staff=False)
+    UserExtra.objects.create(user=user2, rappresentante=staff_user)
+    user3 = User.objects.create(email="user3@test.it", is_staff=False)
+    UserExtra.objects.create(user=user3, rappresentante=staff_user)
+    
+    # faccio la richiesta con graphql: da un rappresentante
+    response = staff_api_client.post_graphql(
+        CONTATTO_QUERY, {}
+    )
+    content = get_graphql_content(response)
+    data = content["data"]["clienti"]["edges"]
+    assert len(data) == 2
+    assert all([not user["node"]["user"]["isStaff"] for user in data])
+    assert all([user["node"]["rappresentante"]["email"] == rappresentante.user.email for user in data])
+    # faccio la richiesta con graphql: da un amministratore, NON rappresentante
+    rappresentante.is_rappresentante = False
+    rappresentante.save()
+    response = staff_api_client.post_graphql(
+        CONTATTO_QUERY, {}
+    )
+    content = get_graphql_content(response)
+    data = content["data"]["clienti"]["edges"]
+    assert len(data) == 3
+    assert all([not user["node"]["user"]["isStaff"] for user in data])
+    
+    # check permissions
+    response = user_api_client.post_graphql(CONTATTO_QUERY, {})
+    assert_no_permission(response)
 
 # ------- MUTATIONS
 MUTATION_CREA_CLIENTE = """

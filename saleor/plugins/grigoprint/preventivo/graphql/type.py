@@ -19,9 +19,11 @@ from .. import models
 
 StatoPreventivoEnum = choices_to_enum(models.StatoPreventivo)
 
-class PreventivoLine(ModelObjectType[models.PreventivoLine]):
-    id = graphene.GlobalID(required=True, description="The ID of the checkout line.")
-    checkout_line = graphene.Field(CheckoutLine)
+class PreventivoLinea(ModelObjectType[models.PreventivoLinea]):
+    id = graphene.ID(required=True, description="The ID of the checkout line.")
+    checkout_line = graphene.Field(CheckoutLine, description="CheckoutLine originale saleor")
+    correlato_su = graphene.Field("saleor.plugins.grigoprint.preventivo.graphql.type.PreventivoLinea")
+    
     descrizione_forzata = JSONString(description="Descrizione forzata, sovrascrive descrizione del prodotto." + RICH_CONTENT)
     prezzo_netto_forzato = graphene.Float(
         description="Prezzo che sovrascrive il prezzo del prodotto, sconti ecc"
@@ -29,11 +31,12 @@ class PreventivoLine(ModelObjectType[models.PreventivoLine]):
     class Meta:
         description = "Rappresenta una linea nel preventivo."
         interfaces = [graphene.relay.Node,]
-        model = models.PreventivoLine
+        model = models.PreventivoLinea
     
     @staticmethod
-    def resolve_id(root: models.PreventivoLine, _info: ResolveInfo):
+    def resolve_id(root: models.PreventivoLinea, _info: ResolveInfo):
         return graphene.Node.to_global_id("CheckoutLine", root.checkout_line.pk)
+    
 
 
 class Preventivo(ModelObjectType[models.Preventivo]):
@@ -41,13 +44,12 @@ class Preventivo(ModelObjectType[models.Preventivo]):
     checkout = graphene.Field(Checkout,description="Collegamento ad oggetto Checkout di saleor")
     numero = graphene.String(description="anno + id incrementale")
     
-    lines = NonNullList(
-        PreventivoLine,
+    linee = graphene.List(
+        PreventivoLinea,
         description=(
             "A list of checkout lines, each containing information about "
             "an item in the checkout."
-        ),
-        required=True,
+        )
     )
 
     stato = StatoPreventivoEnum(description="StatoPreventivo: se NON CHECKOUT allora è preventivo")
@@ -61,7 +63,13 @@ class Preventivo(ModelObjectType[models.Preventivo]):
     @staticmethod
     def resolve_id(root: models.Preventivo, _info, **_kwargs):
         return graphene.Node.to_global_id("Checkout", root.checkout.pk)
-    
+    @staticmethod
+    def resolve_linee(root: models.Preventivo, _info, **_kwargs):
+        checkout_line_ids = [linea.id for linea in root.checkout.lines.all()]
+        print(checkout_line_ids)
+        preventivo_linee = models.PreventivoLinea.objects.filter(checkout_line_id__in=root.checkout.lines.all())
+        print(preventivo_linee)
+        return preventivo_linee
 
 class PreventivoCountableConnection(CountableConnection):
     class Meta:

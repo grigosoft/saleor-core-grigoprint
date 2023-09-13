@@ -4,6 +4,7 @@ from saleor.account.error_codes import AccountErrorCode
 from saleor.graphql.account.types import User
 from django.core.exceptions import ValidationError
 from saleor.graphql.core import ResolveInfo
+from saleor.graphql.core.utils import from_global_id_or_error
 
 from saleor.permission.enums import AccountPermissions
 from saleor.plugins.grigoprint.accountExtra.enum import TipoUtente
@@ -11,7 +12,8 @@ from saleor.plugins.grigoprint.accountExtra.graphql.mutation.user import add_use
 from saleor.plugins.grigoprint.accountExtra.graphql.util import accerta_rappresentante_or_error, accerta_cliente_del_rappresentante_or_error, is_rappresentante
 from saleor.plugins.grigoprint.permissions import GrigoprintPermissions
 # from ...util import isUserExtra, controllaOCreaUserExtra
-from ...models import Contatto, Iva, Listino
+from ... import models
+from .. import type
 from .... import util
 
 
@@ -122,7 +124,7 @@ def clean_user_extra_base(user:"User", cleaned_input_extra, data):
 
 def clean_user_extra(user:"User", cleaned_input_extra, data):
     clean_user_extra_base(user,cleaned_input_extra,data)
-    # formattazione fatta a front-end
+    # formattazione fatta a front-end?
     # email = cleaned_input.get("email")
     # if email:
     #     cleaned_input["email"] = util.str_strip_lower(email)
@@ -134,10 +136,12 @@ def clean_user_extra(user:"User", cleaned_input_extra, data):
     #     cleaned_input["last_name"] = util.str_strip_title(last_name)
     listino_id = cleaned_input_extra.get("listino_id", None)
     if listino_id:
-        cleaned_input_extra["listino"] = Listino.objects.filter(pk=listino_id).first()
+        _model, listino_id = from_global_id_or_error(listino_id, type.Listino)
+        cleaned_input_extra["listino"] = models.Listino.objects.filter(pk=listino_id).first()
     iva_id = cleaned_input_extra.get("iva_id", None)
     if iva_id:
-        cleaned_input_extra["iva"] = Iva.objects.filter(pk=iva_id).first()
+        _model, iva_id = from_global_id_or_error(iva_id, type.Iva)
+        cleaned_input_extra["iva"] = models.Iva.objects.filter(pk=iva_id).first()
 
     # TODO aggiunta automatica al gruppo permessi dei rappresentanti
     # is_rappresentante = cleaned_input.get("is_rappresentante")

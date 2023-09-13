@@ -14,6 +14,7 @@ from saleor.graphql.core.filters import (
     ObjectTypeFilter,
 )
 from saleor.graphql.core.types import DateRangeInput, DateTimeRangeInput, IntRangeInput
+from saleor.graphql.core.types.filter_input import FilterInputObjectType
 from saleor.graphql.utils.filters import filter_range_field
 
 
@@ -85,3 +86,12 @@ class ClientiFilter(MetadataFilterBase):
             "is_rappresentante",
             "search",
         ]
+
+    
+class ClientiFilterInput(FilterInputObjectType):
+    class Meta:
+        filterset_class = ClientiFilter
+
+class StaffFilterInput(FilterInputObjectType):
+    class Meta:
+        filterset_class = ClientiFilter

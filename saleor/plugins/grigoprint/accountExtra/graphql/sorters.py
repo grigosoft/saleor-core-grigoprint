@@ -24,7 +24,12 @@ class UserExtraSortField(graphene.Enum):
     def qs_with_order_count(queryset: QuerySet, **_kwargs) -> QuerySet:
         return queryset.annotate(order_count=Count("user__orders__id"))
 
-class UserExtraSortingInput(SortInputObjectType):
+class ClientiSortingInput(SortInputObjectType):
+    class Meta:
+        sort_enum = UserExtraSortField
+        type_name = "usersExtra"
+
+class StaffSortingInput(SortInputObjectType):
     class Meta:
         sort_enum = UserExtraSortField
         type_name = "usersExtra"

@@ -73,9 +73,50 @@ FULL_USER_QUERY = """
         }
     }
 """
+CLIENTI_QUERY = """
+    {
+        clienti(first: 20) {
+            edges {
+                node {
+                    email
+                    user{
+                        isStaff
+                    }
+                }
+            }
+        }
+    }
+    """
+STAFF_UTENTI_QUERY = """
+    {
+        staffUtenti(first: 20) {
+            edges {
+                node {
+                    email
+                    user{
+                        isStaff
+                    }
+                }
+            }
+        }
+    }
+    """
 CONTATTO_QUERY = """
     query Contatto ($id: ID!) {
         contatto(id: $id){
+            userExtra{
+                email
+            }
+            email
+            denominazione
+            telefono
+            uso
+        }
+    }
+"""
+CONTATTI_UTENTE_QUERY = """
+    query ContattiUtente ($id: ID!) {
+        contattiUtente(id: $id){
             userExtra{
                 email
             }
@@ -95,7 +136,7 @@ def test_query_utente_full(
 ):
     user = User.objects.create(email="customer1@test.it")
     #user extra
-    UserExtra.objects.create(
+    user_extra = UserExtra.objects.create(
         user = user,
         denominazione = "denominazione",
         id_danea = "054",
@@ -130,25 +171,25 @@ def test_query_utente_full(
     assert data["id"] == ID
     assert data["email"] == user.email
     assert data["user"]["email"] == user.email
-    assert data["denominazione"] == user.extra.denominazione
-    assert data["idDanea"] == user.extra.id_danea
-    assert data["tipoUtente"] == user.extra.tipo_utente
-    assert data["isRappresentante"] == user.extra.is_rappresentante
+    assert data["denominazione"] == user_extra.denominazione
+    assert data["idDanea"] == user_extra.id_danea
+    assert data["tipoUtente"] == user_extra.tipo_utente
+    assert data["isRappresentante"] == user_extra.is_rappresentante
     # assert data["rappresentante"] == user.extra.rappresentante
-    assert data["commissione"] == user.extra.commissione
-    assert data["piva"] == user.extra.piva
-    assert data["cf"] == user.extra.cf
-    assert data["pec"] == user.extra.pec
-    assert data["sdi"] == user.extra.sdi
-    assert data["rifAmmin"] == user.extra.rif_ammin
-    assert data["splitPayment"] == user.extra.split_payment
-    assert data["coordinateBancarie"] == user.extra.coordinate_bancarie
+    assert data["commissione"] == user_extra.commissione
+    assert data["piva"] == user_extra.piva
+    assert data["cf"] == user_extra.cf
+    assert data["pec"] == user_extra.pec
+    assert data["sdi"] == user_extra.sdi
+    assert data["rifAmmin"] == user_extra.rif_ammin
+    assert data["splitPayment"] == user_extra.split_payment
+    assert data["coordinateBancarie"] == user_extra.coordinate_bancarie
     #assert data["iva"] == user.extra.iva
-    assert data["porto"] == user.extra.porto
-    assert data["vettore"] == user.extra.vettore
-    assert data["pagamento"] == user.extra.pagamento
+    assert data["porto"] == user_extra.porto
+    assert data["vettore"] == user_extra.vettore
+    assert data["pagamento"] == user_extra.pagamento
     # assert data["listino"] == user.extra.listino
-    assert data["sconto"] == user.extra.sconto
+    assert data["sconto"] == user_extra.sconto
 
     # assert len(data["contatti"]) == user.extra.contatti.count()
     # for contatto in data["contatti"]:
@@ -211,20 +252,6 @@ def test_query_clienti(
         user_api_client, 
         permission_manage_users
     ):
-    query = """
-    {
-        clienti(first: 20) {
-            edges {
-                node {
-                    email
-                    user{
-                        isStaff
-                    }
-                }
-            }
-        }
-    }
-    """
     #creo gli utententi nel db
     staff1 = User.objects.create(email="staff1@test.it", is_staff=True)
     UserExtra.objects.create(user=staff1)
@@ -236,7 +263,7 @@ def test_query_clienti(
     # faccio la richiesta con graphql
     variables = {}
     response = staff_api_client.post_graphql(
-        query, variables, permissions=[permission_manage_users]
+        CLIENTI_QUERY, variables, permissions=[permission_manage_users]
     )
     content = get_graphql_content(response)
     data = content["data"]["clienti"]["edges"]
@@ -244,7 +271,7 @@ def test_query_clienti(
     assert all([not user["node"]["user"]["isStaff"] for user in data])
 
     # check permissions
-    response = user_api_client.post_graphql(query, variables)
+    response = user_api_client.post_graphql(CLIENTI_QUERY, variables)
     assert_no_permission(response)
 
 def test_query_staff_utenti(
@@ -252,20 +279,6 @@ def test_query_staff_utenti(
         user_api_client, 
         permission_manage_staff
 ):
-    query = """
-    {
-        staffUtenti(first: 20) {
-            edges {
-                node {
-                    email
-                    user{
-                        isStaff
-                    }
-                }
-            }
-        }
-    }
-    """
     #creo gli utententi nel db
     staff1 = User.objects.create(email="staff1@test.it", is_staff=True)
     UserExtra.objects.create(user=staff1)
@@ -277,7 +290,7 @@ def test_query_staff_utenti(
     # faccio la richiesta con graphql
     variables = {}
     response = staff_api_client.post_graphql(
-        query, variables, permissions=[permission_manage_staff]
+        STAFF_UTENTI_QUERY, variables, permissions=[permission_manage_staff]
     )
     content = get_graphql_content(response)
     data = content["data"]["staffUtenti"]["edges"]
@@ -285,7 +298,7 @@ def test_query_staff_utenti(
     assert all([user["node"]["user"]["isStaff"] for user in data])
 
     # check permissions
-    response = user_api_client.post_graphql(query, variables)
+    response = user_api_client.post_graphql(STAFF_UTENTI_QUERY, variables)
     assert_no_permission(response)
 
 
@@ -309,14 +322,13 @@ def test_query_contatto(
         email = "grig.griganto@gmail.com"
     )
 
-    query = CONTATTO_QUERY
     # ricreo l'id di graphene per individuare l'untente in graphene
     ID = graphene.Node.to_global_id("Contatto", contatto1.id)
     variables = {"id": ID}
     staff_api_client.user.user_permissions.add(
         permission_manage_users, permission_manage_orders
     )
-    response = staff_api_client.post_graphql(query, variables)
+    response = staff_api_client.post_graphql(CONTATTO_QUERY, variables)
     content = get_graphql_content(response)
     data = content["data"]["contatto"]
     assert data["denominazione"] == contatto1.denominazione
@@ -324,7 +336,56 @@ def test_query_contatto(
     assert data["telefono"] == contatto1.telefono
     assert data["uso"] == contatto1.uso
     # no access for normal user
-    response_user = user_api_client.post_graphql(MUTATION_CANCELLA_CONTATTO, variables)
+    response_user = user_api_client.post_graphql(CONTATTO_QUERY, variables)
+    assert_no_permission(response_user)
+
+def test_query_contatti(
+    staff_api_client,
+    user_api_client,
+    customer_user,
+    permission_manage_users,
+    permission_manage_orders
+):
+    user = customer_user
+    #user extra
+    user_extra = UserExtra.objects.create(
+        user = user
+    )
+    contatto1 = Contatto.objects.create(
+        user_extra = user_extra,
+        denominazione = "antonio grigolini",
+        telefono = "3473462414",
+        uso = TipoContatto.FATTURAZIONE,
+        email = "grig.griganto@gmail.com"
+    )
+    contatto2 = Contatto.objects.create(
+        user_extra = user_extra,
+        denominazione = "antonio grigolini 2",
+        telefono = "3518882958",
+        uso = TipoContatto.CONSEGNA,
+        email = "griganto.games@gmail.com"
+    )
+
+    # ricreo l'id di graphene per individuare l'untente in graphene
+    user_id = graphene.Node.to_global_id("Contatto", user.id)
+    variables = {"id": user_id}
+    staff_api_client.user.user_permissions.add(
+        permission_manage_users, permission_manage_orders
+    )
+    response = staff_api_client.post_graphql(CONTATTI_UTENTE_QUERY, variables)
+    content = get_graphql_content(response)
+    data = content["data"]["contatti"]
+    assert len(data) == 2
+    assert data[0]["denominazione"] == contatto1.denominazione
+    assert data[0]["userExtra"]["email"] == contatto1.user_extra.user.email
+    assert data[0]["telefono"] == contatto1.telefono
+    assert data[0]["uso"] == contatto1.uso
+    assert data[1]["denominazione"] == contatto2.denominazione
+    assert data[1]["userExtra"]["email"] == contatto2.user_extra.user.email
+    assert data[1]["telefono"] == contatto2.telefono
+    assert data[1]["uso"] == contatto2.uso
+    # no access for normal user
+    response_user = user_api_client.post_graphql(CONTATTI_UTENTE_QUERY, variables)
     assert_no_permission(response_user)
     
 
@@ -730,9 +791,9 @@ def test_mutations_cliente(
     rappresentante = UserExtra.objects.create(user=staff_user, is_rappresentante=True, denominazione="nome rappresentante")
     rappresentante_id = graphene.Node.to_global_id("User", rappresentante.user.pk)
     iva = Iva.objects.create(nome="22%",valore=0.22,info="standard 22%")
-    iva_id = iva.pk
+    iva_id = graphene.Node.to_global_id("Iva", iva.pk)
     listino = Listino.objects.create(nome="pubblico",ricarico=0.34,info="Cliente finale")
-    listino_id = listino.pk
+    listino_id = graphene.Node.to_global_id("Listino", listino.pk)
     variables = {
                     "email":email,
                     "denominazione":"den test",
@@ -788,9 +849,9 @@ def test_mutations_cliente(
     
     # UPDATE -----
     iva = Iva.objects.create(nome="0%",valore=0,info="esportazione")
-    iva_id = iva.pk
+    iva_id = graphene.Node.to_global_id("Iva", iva.pk)
     listino = Listino.objects.create(nome="agenzie",ricarico=0.12,info="rivenditori")
-    listino_id = listino.pk
+    listino_id = graphene.Node.to_global_id("Listino", listino.pk)
     user_id = graphene.Node.to_global_id("User", user.pk)
     variables = {
                     "id":user_id,
@@ -1081,9 +1142,9 @@ def test_mutations_staff(
     rappresentante = UserExtra.objects.create(user=staff_user, is_rappresentante=True, denominazione="nome rappresentante")
     rappresentante_id = graphene.Node.to_global_id("User", rappresentante.user.pk)
     iva = Iva.objects.create(nome="22%",valore=0.22,info="standard 22%")
-    iva_id = iva.pk
+    iva_id = graphene.Node.to_global_id("Iva", iva.pk)
     listino = Listino.objects.create(nome="pubblico",ricarico=0.34,info="Cliente finale")
-    listino_id = listino.pk
+    listino_id = graphene.Node.to_global_id("Listino", listino.pk)
     variables = {
                     "email":email,
                     "denominazione":"den test",
@@ -1139,9 +1200,9 @@ def test_mutations_staff(
     
     # UPDATE -----
     iva = Iva.objects.create(nome="0%",valore=0,info="esportazione")
-    iva_id = iva.pk
+    iva_id = graphene.Node.to_global_id("Iva", iva.pk)
     listino = Listino.objects.create(nome="agenzie",ricarico=0.12,info="rivenditori")
-    listino_id = listino.pk
+    listino_id = graphene.Node.to_global_id("Listino", listino.pk)
     user_id = graphene.Node.to_global_id("User", user.pk)
     variables = {
                     "id":user_id,

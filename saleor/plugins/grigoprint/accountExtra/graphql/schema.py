@@ -1,8 +1,8 @@
 import graphene
 from django.db.models import Q
+from graphql import GraphQLError
 from saleor.graphql.core.types.common import AccountError
 
-from saleor.graphql.core.types.filter_input import FilterInputObjectType
 from saleor.graphql.utils import get_user_or_app_from_context
 from saleor.permission.utils import has_one_of_permissions
 
@@ -25,8 +25,8 @@ from .....graphql.account.resolvers import (
 )
 from ..util import is_user_extra
 from .....graphql.core.validators import validate_one_of_args_is_in_query
-from .sorters import UserExtraSortingInput
-from .filters import ClientiFilter
+from .sorters import ClientiSortingInput, StaffSortingInput
+from .filters import ClientiFilterInput, StaffFilterInput
 
 from ...graphql_util import get_user_extra_or_None
 
@@ -59,7 +59,7 @@ def resolve_user_con_rappresentante(info, id=None, email=None, external_referenc
         ):
             rappresentante = info.context.user.extra if is_user_extra(info.context.user) and info.context.user.extra.is_rappresentante else None # type: ignore
             return models.UserExtra.objects.clienti(rappresentante).filter(**filter_kwargs).first()
-    return PermissionDenied(
+    raise PermissionDenied(
         permissions=[
             AccountPermissions.MANAGE_STAFF,
             AccountPermissions.MANAGE_USERS,
@@ -120,9 +120,6 @@ def resolve_clienti_con_rappresentante(info):
 def resolve_staff(_info):
     return models.UserExtra.objects.staff()
 
-class ClientiFilterInput(FilterInputObjectType):
-    class Meta:
-        filterset_class = ClientiFilter
 
 class AccountExtraQueries(graphene.ObjectType):
     utente = PermissionsField(
@@ -136,25 +133,28 @@ class AccountExtraQueries(graphene.ObjectType):
             AccountPermissions.MANAGE_USERS,
             OrderPermissions.MANAGE_ORDERS,
         ],
-        description="Look up a user by ID or email address.",
+        description="Look up a user by ID or email address. Con controllo permessi rappresentante",
+        name = "utente",
     )
     clienti = FilterConnectionField(
         type.UserExtraCountableConnection,
         description="Lista completa di utenti, in base a chi è loggato",
         filter=ClientiFilterInput(description="Filtering options for customers."),
-        sort_by=UserExtraSortingInput(description="Sort customers."),
+        sort_by=ClientiSortingInput(description="Sort customers."),
         permissions=[
             OrderPermissions.MANAGE_ORDERS,
             AccountPermissions.MANAGE_USERS,
         ],
+        name = "clienti",
     )
     
     staff_utenti = FilterConnectionField(
         type.UserExtraCountableConnection,
-        # filter=StaffUserInput(description="Filtering options for staff users."),
-        # sort_by=UserSortingInput(description="Sort staff users."),
+        filter=StaffFilterInput(description="Filtering options for staff users."),
+        sort_by=StaffSortingInput(description="Sort staff users."),
         description="List of the shop's staff users.",
         permissions=[AccountPermissions.MANAGE_STAFF],
+        name = "staffUtenti",
     )
     contatto = PermissionsField(
         type.Contatto,
@@ -163,11 +163,12 @@ class AccountExtraQueries(graphene.ObjectType):
         name = "contatto",
         permissions=[AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS],
     )
-    contatti_utente = FilterConnectionField(
-        type.ContattoCountableConnection,
+    contatti_utente = PermissionsField(
+        graphene.List(type.Contatto),
         id=graphene.Argument(graphene.ID, description="ID of the user."),
-        description="lista dei contatti di un cliente da ID cliente",
-        name = "contatti_utente",
+        description="lista dei contatti di un cliente da ID cliente."
+            "Se a richiedere  un rappresentante, può richiederlo solo per suoi clienti",
+        name = "contattiUtente",
         permissions=[AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS],
     )
     # contatti = graphene.List(
@@ -183,10 +184,23 @@ class AccountExtraQueries(graphene.ObjectType):
         description="lista delle aliquote iva disponibili",
         name = "aliquoteIva"
     )
+    aliquota_iva = graphene.Field(
+        type.Iva,
+        id=graphene.Argument(graphene.ID, description="ID dell'aliquota iva."),
+        description="Un aliquota iva specifica",
+        name = "aliquotaIva"
+    )
     listini = PermissionsField(
         graphene.List(type.Listino),
         description="listini disponibili",
         name = "listini",
+        permissions=[AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS],
+    )
+    listino = PermissionsField(
+        type.Listino,
+        id=graphene.Argument(graphene.ID, description="ID del listino."),
+        description="Un listino specifico",
+        name = "listino",
         permissions=[AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS],
     )
     # gruppi = graphene.List(
@@ -244,20 +258,36 @@ class AccountExtraQueries(graphene.ObjectType):
             ]
         )
     @staticmethod
-    def resolve_contatti(
-        _root, info: ResolveInfo, *, id=None
+    def resolve_contatti_utente(
+        _root, info: ResolveInfo, *, id=None, **kwargs
     ):
-        validate_one_of_args_is_in_query(
-            "id", id
-        )
-        return #resolve_user_con_rappresentante(info, id, email, external_reference)
+        validate_one_of_args_is_in_query("id", id)
+        user = resolve_user_con_rappresentante(info, id)
+        if not user:
+            return AccountError(f"Impossibile recuperare l'user con id: {id}")
+        return user.contatti # type: ignore
+        
+        
+    
     @staff_member_or_app_required
     def resolve_aliquote_iva(self, info, **kwargs):
         return models.Iva.objects.all()
-        
+    @staff_member_or_app_required
+    def resolve_aliquota_iva(self, info, id=None, **kwargs):
+        if id:
+            _type, pk = from_global_id_or_error(id, type.Iva)
+            return models.Iva.objects.get(pk=pk)
+        return GraphQLError("Must receive a Iva id.")
+
     @staff_member_or_app_required
     def resolve_listini(self, info, **kwargs):
         return models.Listino.objects.all()
+    @staff_member_or_app_required
+    def resolve_listino(self, info, id=None, **kwargs):
+        if id:
+            _type, pk = from_global_id_or_error(id, type.Listino)
+            return models.Listino.objects.get(pk=pk)
+        return GraphQLError("Must receive a Listino id.")
     # @staff_member_or_app_required
     # def resolve_gruppi(self, info, **kwargs):
     #     return auth_models.Group.objects.all()

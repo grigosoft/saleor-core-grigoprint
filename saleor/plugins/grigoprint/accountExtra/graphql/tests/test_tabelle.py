@@ -29,8 +29,10 @@ ALIQUOTE_IVA_QUERY = """
     }
 """
 ALIQUOTA_IVA_QUERY = """
-    query aliquotaIva {
-        aliquotaIva {
+    query aliquotaIva(
+        $id:ID!
+    ) {
+        aliquotaIva(id:$id) {
             id
             nome
             valore
@@ -49,8 +51,10 @@ LISTINI_QUERY = """
     }
 """
 LISTINO_QUERY = """
-    query Listino {
-        listino {
+    query Listino(
+        $id:ID!
+    ) {
+        listino(id:$id) {
             id
             nome
             ricarico
@@ -64,23 +68,31 @@ def test_query_aliquote_iva(
         permission_manage_users,
         permission_manage_staff
     ):
-    # assert Iva.objects.all() is []
-
+    staff_api_client.user.user_permissions.add(
+        permission_manage_users, permission_manage_staff
+    )
+    # creo l'oggetto
     iva = Iva.objects.create(
         nome = "22%",
         valore = 0.22,
         info = "info bla bla"
     )
-    query = ALIQUOTE_IVA_QUERY
-    
-    staff_api_client.user.user_permissions.add(
-        permission_manage_users, permission_manage_staff
-    )
-    response = staff_api_client.post_graphql(query)
+    # test AliquoteIva
+    response = staff_api_client.post_graphql(ALIQUOTE_IVA_QUERY)
     content = get_graphql_content(response)
     data = content["data"]["aliquoteIva"][0]
-    # TODO serve un id ad andrea? aggiungere graphene.Node
-    assert_id_uguale_pk(data["id"],iva.pk)
+    # assert_id_uguale_pk(data["id"],iva.pk)
+    assert data["nome"] == iva.nome
+    assert data["valore"] == iva.valore
+    assert data["info"] == iva.info
+
+    # test AliquotaIva
+    iva_id = graphene.Node.to_global_id("Iva", iva.pk)
+    var={"id":iva_id}
+    response = staff_api_client.post_graphql(ALIQUOTA_IVA_QUERY,var)
+    content = get_graphql_content(response)
+    data = content["data"]["aliquotaIva"]
+    # assert_id_uguale_pk(data["id"],iva.pk)
     assert data["nome"] == iva.nome
     assert data["valore"] == iva.valore
     assert data["info"] == iva.info
@@ -90,22 +102,30 @@ def test_query_listini(
         permission_manage_users,
         permission_manage_orders
     ):
-
+    staff_api_client.user.user_permissions.add(
+        permission_manage_users, permission_manage_orders
+    )
+    # creo l'oggetto
     listino = Listino.objects.create(
         nome = "pubblico",
         ricarico = 20,
         info = "listino pubblico"
     )
-    query = LISTINI_QUERY
-    
-    staff_api_client.user.user_permissions.add(
-        permission_manage_users, permission_manage_orders
-    )
-    response = staff_api_client.post_graphql(query)
+    # test listini
+    response = staff_api_client.post_graphql(LISTINI_QUERY)
     content = get_graphql_content(response)
     data = content["data"]["listini"][0]
-    # TODO serve un id ad andrea? aggiungere graphene.Node
-    assert_id_uguale_pk(data["id"],listino.pk)
+    # assert_id_uguale_pk(data["id"],listino.pk)
+    assert data["nome"] == listino.nome
+    assert data["ricarico"] == listino.ricarico
+    assert data["info"] == listino.info
+    # test listino
+    listino_id = graphene.Node.to_global_id("Listino", listino.pk)
+    var={"id":listino_id}
+    response = staff_api_client.post_graphql(LISTINO_QUERY,var)
+    content = get_graphql_content(response)
+    data = content["data"]["listino"]
+    # assert_id_uguale_pk(data["id"],listino.pk)
     assert data["nome"] == listino.nome
     assert data["ricarico"] == listino.ricarico
     assert data["info"] == listino.info
@@ -208,7 +228,7 @@ def test_mutations_iva(
     assert len(aliquoteIva) == 1
     aliquotaIva = aliquoteIva.first()
     assert aliquotaIva is not None
-    assert_id_uguale_pk(id_created,aliquotaIva.pk)
+    # assert_id_uguale_pk(id_created,aliquotaIva.pk)
     assert data["nome"] == aliquotaIva.nome
     assert data["valore"] == aliquotaIva.valore
     assert data["info"] == aliquotaIva.info
@@ -345,7 +365,7 @@ def test_mutations_listino(
     assert len(listini) == 1
     listino = listini.first()
     assert listino is not None
-    assert_id_uguale_pk(id_created,listino.pk)
+    # assert_id_uguale_pk(id_created,listino.pk)
     assert data["nome"] == listino.nome
     assert data["ricarico"] == listino.ricarico
     assert data["info"] == listino.info

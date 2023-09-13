@@ -88,8 +88,15 @@ class Preventivo(models.Model):
         return f"{self.anno}/{self.number}"
     # TODO sendHistory (quando si invia un preventivo si registra una copia di quello inviato)
 
-class PreventivoLine(models.Model):
-    checkout_line = models.OneToOneField(CheckoutLine, on_delete=models.CASCADE, related_name="extra", primary_key=True)
+
+class PreventivoLinea(models.Model):
+
+    checkout_line = models.OneToOneField(
+        CheckoutLine, 
+        on_delete=models.CASCADE, 
+        related_name="extra", 
+        primary_key=True
+    )
     
     # personalizzazione
     personalizzazione = models.ForeignKey(
@@ -100,7 +107,12 @@ class PreventivoLine(models.Model):
         null=True,
     )
     #visibile
-    
+    correlato_su = models.ForeignKey(
+        "PreventivoLinea",
+        related_name="correlato_giu", 
+        on_delete=models.CASCADE,
+        null=True, blank=True
+    )
     descrizione_forzata = models.TextField(null=True, blank=True)
     prezzo_netto_forzato = models.DecimalField(
         max_digits=settings.DEFAULT_MAX_DIGITS,
@@ -109,3 +121,4 @@ class PreventivoLine(models.Model):
     )
     sconto = models.FloatField(default=0)
     # iva = models.FloatField()
+
