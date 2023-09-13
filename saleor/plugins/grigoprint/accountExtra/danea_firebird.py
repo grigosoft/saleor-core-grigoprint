@@ -6,7 +6,7 @@ import fdb
 
 from saleor.plugins.grigoprint.accountExtra.enum import TipoUtente
 from saleor.account.search import prepare_user_search_document_value
-from saleor.plugins.grigoprint.accountExtra.util import controllaOCreaUserExtra
+from saleor.plugins.grigoprint.accountExtra.util import controlla_o_crea_userextra
 
 from ....account.models import Address
 

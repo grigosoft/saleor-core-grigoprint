@@ -265,7 +265,7 @@ class AccountExtraQueries(graphene.ObjectType):
         user = resolve_user_con_rappresentante(info, id)
         if not user:
             return AccountError(f"Impossibile recuperare l'user con id: {id}")
-        return user.contatti # type: ignore
+        return models.Contatto.objects.all()#filter(id__in=user.contatti) # type: ignore
         
         
     
