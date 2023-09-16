@@ -104,6 +104,7 @@ STAFF_UTENTI_QUERY = """
 CONTATTO_QUERY = """
     query Contatto ($id: ID!) {
         contatto(id: $id){
+            id
             userExtra{
                 email
             }
@@ -117,6 +118,7 @@ CONTATTO_QUERY = """
 CONTATTI_UTENTE_QUERY = """
     query ContattiUtente ($id: ID!) {
         contattiUtente(id: $id){
+            id
             userExtra{
                 email
             }
@@ -323,8 +325,8 @@ def test_query_contatto(
     )
 
     # ricreo l'id di graphene per individuare l'untente in graphene
-    ID = graphene.Node.to_global_id("Contatto", contatto1.id)
-    variables = {"id": ID}
+    id = graphene.Node.to_global_id("Contatto", contatto1.pk)
+    variables = {"id": id}
     staff_api_client.user.user_permissions.add(
         permission_manage_users, permission_manage_orders
     )
@@ -339,7 +341,7 @@ def test_query_contatto(
     response_user = user_api_client.post_graphql(CONTATTO_QUERY, variables)
     assert_no_permission(response_user)
 
-def test_query_contatti(
+def test_query_contatti_utente(
     staff_api_client,
     user_api_client,
     customer_user,
@@ -367,14 +369,14 @@ def test_query_contatti(
     )
 
     # ricreo l'id di graphene per individuare l'untente in graphene
-    user_id = graphene.Node.to_global_id("Contatto", user.id)
+    user_id = graphene.Node.to_global_id("User", user.id)
     variables = {"id": user_id}
     staff_api_client.user.user_permissions.add(
         permission_manage_users, permission_manage_orders
     )
     response = staff_api_client.post_graphql(CONTATTI_UTENTE_QUERY, variables)
     content = get_graphql_content(response)
-    data = content["data"]["contatti"]
+    data = content["data"]["contattiUtente"]
     assert len(data) == 2
     assert data[0]["denominazione"] == contatto1.denominazione
     assert data[0]["userExtra"]["email"] == contatto1.user_extra.user.email

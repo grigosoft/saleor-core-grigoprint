@@ -33,8 +33,8 @@ class UserExtraManager(models.Manager["UserExtra"]):
     #     return self.get_queryset().filter(user=user.id).first()
 
     def clienti(self, rappresentante:Union["UserExtra",None] = None):
-        if rappresentante:
-            clienti = rappresentante.clienti
+        if rappresentante and rappresentante.is_rappresentante:
+            clienti = self.get_queryset().filter(rappresentante=rappresentante)
         else:
             orders = Order.objects.values("user_id")
             clienti = self.get_queryset().filter(
@@ -87,10 +87,10 @@ class UserExtra(models.Model):
 
 
 
-class ContattoManager(models.Manager):
-    pass
+# class ContattoManager(models.Manager):
+#     pass
 class Contatto(models.Model):
-    objects = ContattoManager()
+    # objects = ContattoManager()
     
     UniqueConstraint(fields=['user_extra', 'email', 'telefono'], name='unique_contatto')
     

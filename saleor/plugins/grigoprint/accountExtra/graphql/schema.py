@@ -1,7 +1,7 @@
 import graphene
 from django.db.models import Q
 from graphql import GraphQLError
-from saleor.graphql.core.types.common import AccountError
+from saleor.graphql.core.types.common import AccountError, NonNullList
 
 from saleor.graphql.utils import get_user_or_app_from_context
 from saleor.permission.utils import has_one_of_permissions
@@ -23,7 +23,7 @@ from .....graphql.account.resolvers import (
     resolve_staff_users,
     resolve_user,
 )
-from ..util import is_user_extra
+from ..util import is_user_extra, is_rappresentante
 from .....graphql.core.validators import validate_one_of_args_is_in_query
 from .sorters import ClientiSortingInput, StaffSortingInput
 from .filters import ClientiFilterInput, StaffFilterInput
@@ -39,6 +39,13 @@ from . import type
 
 @traced_resolver
 def resolve_user_con_rappresentante(info, id=None, email=None, external_reference=None):
+    """
+    Risolve un user tenedo conto della logica rappresentante:
+    se il richiedente è un admin non rappresentante: vede tutti
+    se il richiedente è un rappresentante senza MANAGE_STAFF: vede solo i suoi clienti
+
+    restituisce una tupla: (rappresentante, cliente)
+    """
     requester = get_user_or_app_from_context(info.context)
     if requester:
         filter_kwargs = {}
@@ -51,15 +58,15 @@ def resolve_user_con_rappresentante(info, id=None, email=None, external_referenc
         if requester.has_perms(
             [AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS]
         ):
-            return models.UserExtra.objects.filter(**filter_kwargs).first()
+            return None, models.UserExtra.objects.filter(**filter_kwargs).first()
         if requester.has_perm(AccountPermissions.MANAGE_STAFF):
-            return models.UserExtra.objects.staff().filter(**filter_kwargs).first()
+            return None, models.UserExtra.objects.staff().filter(**filter_kwargs).first()
         if has_one_of_permissions(
             requester, [AccountPermissions.MANAGE_USERS, OrderPermissions.MANAGE_ORDERS]
         ):
-            rappresentante = info.context.user.extra if is_user_extra(info.context.user) and info.context.user.extra.is_rappresentante else None # type: ignore
-            return models.UserExtra.objects.clienti(rappresentante).filter(**filter_kwargs).first()
-    raise PermissionDenied(
+            rappresentante = info.context.user.extra if is_rappresentante(info.context.user) else None # type: ignore
+            return rappresentante, models.UserExtra.objects.clienti(rappresentante).filter(**filter_kwargs).first()
+    return PermissionDenied(
         permissions=[
             AccountPermissions.MANAGE_STAFF,
             AccountPermissions.MANAGE_USERS,
@@ -161,15 +168,15 @@ class AccountExtraQueries(graphene.ObjectType):
         id=graphene.Argument(graphene.ID, description="ID del contatto."),
         description="Contatto singolo da ID",
         name = "contatto",
-        permissions=[AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS],
+        permissions=[AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS, OrderPermissions.MANAGE_ORDERS],
     )
     contatti_utente = PermissionsField(
-        graphene.List(type.Contatto),
+        NonNullList(type.Contatto),
         id=graphene.Argument(graphene.ID, description="ID of the user."),
         description="lista dei contatti di un cliente da ID cliente."
             "Se a richiedere  un rappresentante, può richiederlo solo per suoi clienti",
         name = "contattiUtente",
-        permissions=[AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS],
+        permissions=[AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS, OrderPermissions.MANAGE_ORDERS],
     )
     # contatti = graphene.List(
     #     type.Contatto,
@@ -216,7 +223,8 @@ class AccountExtraQueries(graphene.ObjectType):
         validate_one_of_args_is_in_query(
             "id", id, "email", email, "external_reference", external_reference
         )
-        return resolve_user_con_rappresentante(info, id, email, external_reference)
+        _rappresentante, utente = resolve_user_con_rappresentante(info, id, email, external_reference)
+        return utente
     @staticmethod
     def resolve_clienti(_root, info: ResolveInfo, **kwargs):
         qs = resolve_clienti_con_rappresentante(info)
@@ -232,40 +240,42 @@ class AccountExtraQueries(graphene.ObjectType):
     def resolve_contatto(
         _root, info: ResolveInfo, *, id=None
     ):
+        """ potrebbe essere più sicuro fornire anche l'id dell'utente cosi da poter 
+        prima controllare i permessi 
+        e poi controllare se esiste il contatto
+
+        nel modo attuale si può "provare a trovare gli id di contatti esistenti
+        """
         validate_one_of_args_is_in_query(
             "id", id
         )
-        requester = get_user_or_app_from_context(info.context)
-        if requester:
-            filter_kwargs = {}
-            if id:
-                _model, filter_kwargs["pk"] = from_global_id_or_error(id, type.Contatto)
-            if has_one_of_permissions(requester,
-                [AccountPermissions.MANAGE_STAFF, AccountPermissions.MANAGE_USERS, OrderPermissions.MANAGE_ORDERS]
-            ):
-                return models.Contatto.objects.filter(**filter_kwargs).first()
-            # if requester.has_perm(AccountPermissions.MANAGE_STAFF):
-            #     return models.User.objects.staff().filter(**filter_kwargs).first()
-            # if has_one_of_permissions(
-            #     requester, [AccountPermissions.MANAGE_USERS, OrderPermissions.MANAGE_ORDERS]
-            # ):
-            #     return models.User.objects.customers().filter(**filter_kwargs).first()
-        return PermissionDenied(
-            permissions=[
-                AccountPermissions.MANAGE_STAFF,
-                AccountPermissions.MANAGE_USERS,
-                OrderPermissions.MANAGE_ORDERS,
-            ]
-        )
+        if id:
+            _model, contatto_pk = from_global_id_or_error(id, type.Contatto)
+            contatto = models.Contatto.objects.filter(pk=contatto_pk).first()
+            if contatto:
+                requester = info.context.user
+                if requester:
+                    if contatto.user_extra.user.is_staff:
+                        if requester.has_perm(AccountPermissions.MANAGE_STAFF):
+                            return contatto
+                        else:
+                            return PermissionDenied(permissions=[AccountPermissions.MANAGE_STAFF])
+                    if is_rappresentante(requester):
+                        if contatto.user_extra.rappresentante and contatto.user_extra.rappresentante.pk == requester.pk:
+                            return contatto
+                        else:
+                            return PermissionDenied(f"Non è un cliente del rappresentante {requester.email}")
+                    return contatto
+        return GraphQLError("Impossibile recuperare il contatto")
     @staticmethod
     def resolve_contatti_utente(
         _root, info: ResolveInfo, *, id=None, **kwargs
     ):
         validate_one_of_args_is_in_query("id", id)
-        user = resolve_user_con_rappresentante(info, id)
+        _rappresentante, user = resolve_user_con_rappresentante(info, id)
         if not user:
-            return AccountError(f"Impossibile recuperare l'user con id: {id}")
-        return models.Contatto.objects.all()#filter(id__in=user.contatti) # type: ignore
+            return GraphQLError(f"Impossibile recuperare l'user con id: {id}")
+        return models.Contatto.objects.filter(user_extra=user) # type: ignore
         
         
     

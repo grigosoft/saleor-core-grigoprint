@@ -1,5 +1,6 @@
 import graphene
 from graphene_django import DjangoObjectType
+from saleor.core.exceptions import PermissionDenied
 from saleor.graphql.core.fields import PermissionsField
 from saleor.graphql.core.types.common import NonNullList
 
@@ -108,7 +109,7 @@ class UserExtra(ModelObjectType[models.UserExtra]):
     class Meta:
         description = "Represents user data."
         interfaces = [graphene.relay.Node,]
-        model = models.User
+        model = models.UserExtra
         convert_choices_to_enum = ["porto","vettore","tipo_cliente"]
 
     @staticmethod

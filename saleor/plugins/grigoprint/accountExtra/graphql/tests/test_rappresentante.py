@@ -4,7 +4,7 @@ import pytest
 from saleor.graphql.tests.utils import assert_no_permission, get_graphql_content
 from saleor.permission.models import Permission
 from saleor.plugins.grigoprint.accountExtra.enum import TipoContatto
-from saleor.plugins.grigoprint.accountExtra.graphql.tests.test_staff import MUTATION_AGGIORNA_CONTATTO, MUTATION_CANCELLA_CONTATTO, MUTATION_CREA_CONTATTO, CONTATTO_QUERY, CO
+from saleor.plugins.grigoprint.accountExtra.graphql.tests.test_staff import MUTATION_AGGIORNA_CONTATTO, MUTATION_CANCELLA_CONTATTO, MUTATION_CREA_CONTATTO, CONTATTO_QUERY
 from saleor.plugins.grigoprint.accountExtra.models import Contatto, UserExtra, User
 from saleor.plugins.grigoprint.permissions import GrigoprintPermissions
 
@@ -78,67 +78,104 @@ def test_query_clienti_rappresentante(
     response = user_api_client.post_graphql(QUERY_CLIENTI, {})
     assert_no_permission(response)
 
-def test_query_contatti_rappresentante(
+def test_query_contatto_rappresentante(
     staff_api_client,
     user_api_client,
     permission_manage_users,
-    staff_user,
-    customer_user
+    staff_user
 ):
     staff_api_client.user.user_permissions.add(
         permission_manage_users
     )
     # creo rappresentante
     rappresentante = UserExtra.objects.create(user=staff_user,is_rappresentante = True)
-    user_extra = UserExtra.objects.create(user=customer_user)
+    
+    # creo gli utententi nel db
+    staff1 = User.objects.create(email="staff1@test.it", is_staff=True)
+    staff1_extra = UserExtra.objects.create(user=staff1, is_rappresentante=True)
+    user1 = User.objects.create(email="user1@test.it", is_staff=False)
+    user1_extra = UserExtra.objects.create(user=user1)
+    user2 = User.objects.create(email="user2@test.it", is_staff=False)
+    user2_extra = UserExtra.objects.create(user=user2, rappresentante=staff_user)
+    user3 = User.objects.create(email="user3@test.it", is_staff=False)
+    user3_extra = UserExtra.objects.create(user=user3, rappresentante=staff1)
+    # creo i contatti
     contatto1 = Contatto.objects.create(
-        user_extra = user_extra,
-        denominazione = "antonio grigolini",
+        user_extra = user1_extra,
+        denominazione = "contatto senza rappresentante",
         telefono = "3473462414",
         uso = TipoContatto.FATTURAZIONE,
         email = "grig.griganto@gmail.com"
     )
     contatto2 = Contatto.objects.create(
-        user_extra = user_extra,
-        denominazione = "antonio grigolini 2",
+        user_extra = user2_extra,
+        denominazione = "contatto di cliente staff_user",
         telefono = "3518882958",
         uso = TipoContatto.CONSEGNA,
         email = "griganto.games@gmail.com"
     )
-    # il test senza utenti non funziona, da 0 clienti, 'staff_user' non è a database?
+
+    contatto3 = Contatto.objects.create(
+        user_extra = user3_extra,
+        denominazione = "contatto di cliente staff1",
+        telefono = "3518882958",
+        uso = TipoContatto.CONSEGNA,
+        email = "griganto.games@gmail.com"
+    )
+    contatto1_id = graphene.Node.to_global_id("Contatto", contatto1.pk)
+    contatto2_id = graphene.Node.to_global_id("Contatto", contatto2.pk)
+    contatto3_id = graphene.Node.to_global_id("Contatto", contatto3.pk)
     
-    # creo gli utententi nel db
-    staff1 = User.objects.create(email="staff1@test.it", is_staff=True)
-    UserExtra.objects.create(user=staff1)
-    user1 = User.objects.create(email="user1@test.it", is_staff=False)
-    UserExtra.objects.create(user=user1)
-    user2 = User.objects.create(email="user2@test.it", is_staff=False)
-    UserExtra.objects.create(user=user2, rappresentante=staff_user)
-    user3 = User.objects.create(email="user3@test.it", is_staff=False)
-    UserExtra.objects.create(user=user3, rappresentante=staff_user)
-    
-    # faccio la richiesta con graphql: da un rappresentante
+    # faccio la richiesta con graphql: da un rappresentante verso un cliente senza rappresentante
+    var= {"id":contatto1_id}
     response = staff_api_client.post_graphql(
-        CONTATTO_QUERY, {}
+        CONTATTO_QUERY, var
+    )
+    assert_no_permission(response)
+    # faccio la richiesta con graphql: da un rappresentante verso un suo cliente
+    var= {"id":contatto2_id}
+    response = staff_api_client.post_graphql(
+        CONTATTO_QUERY, var
     )
     content = get_graphql_content(response)
-    data = content["data"]["clienti"]["edges"]
-    assert len(data) == 2
-    assert all([not user["node"]["user"]["isStaff"] for user in data])
-    assert all([user["node"]["rappresentante"]["email"] == rappresentante.user.email for user in data])
+    data = content["data"]["contatto"]
+    assert data["id"] == contatto2_id # verifico al volo se lo recupera
+    assert data["email"] == contatto2.email
+    # faccio la richiesta con graphql: da un rappresentante verso un NON suo cliente
+    var= {"id":contatto3_id}
+    response = staff_api_client.post_graphql(
+        CONTATTO_QUERY, var
+    )
+    assert_no_permission(response)
     # faccio la richiesta con graphql: da un amministratore, NON rappresentante
     rappresentante.is_rappresentante = False
     rappresentante.save()
+    # faccio la richiesta con graphql: da un admin verso un cliente di un altro rappresentante
+    var= {"id":contatto3_id}
     response = staff_api_client.post_graphql(
-        CONTATTO_QUERY, {}
+        CONTATTO_QUERY, var
     )
     content = get_graphql_content(response)
-    data = content["data"]["clienti"]["edges"]
-    assert len(data) == 3
-    assert all([not user["node"]["user"]["isStaff"] for user in data])
+    data = content["data"]["contatto"]
+    assert data["id"] == contatto3_id # verifico al volo se lo recupera
+    assert data["email"] == contatto3.email
+    # faccio la richiesta con graphql: da un admin verso un cliente senza rappresentante
+    var= {"id":contatto1_id}
+    response = staff_api_client.post_graphql(
+        CONTATTO_QUERY, var
+    )
+    content = get_graphql_content(response)
+    data = content["data"]["contatto"]
+    assert data["id"] == contatto1_id # verifico al volo se lo recupera
+    assert data["email"] == contatto1.email
+    # faccio la richiesta con graphql: da un rappresentante verso un NON suo cliente
+    var= {"id":contatto1_id}
+    response = staff_api_client.post_graphql(
+        CONTATTO_QUERY, var
+    )
     
     # check permissions
-    response = user_api_client.post_graphql(CONTATTO_QUERY, {})
+    response = user_api_client.post_graphql(CONTATTO_QUERY, {"id":""})
     assert_no_permission(response)
 
 # ------- MUTATIONS
