@@ -92,8 +92,10 @@ def save_user_extra_base(user:"User", cleaned_data):
     user_extra = user.extra
     user_extra.denominazione=cleaned_data["denominazione"]
         # user_extra.tipo_utente=cleaned_data["tipo_utente"]
-    user_extra.piva=cleaned_data.get("piva", None)
-    user_extra.cf=cleaned_data.get("cf", None)
+    piva = cleaned_data.get("piva", None)
+    user_extra.piva = piva if piva != "" else None
+    cf = cleaned_data.get("cf", None)
+    user_extra.cf = cf if cf != "" else None
     user_extra.pec=cleaned_data.get("pec", "")
     user_extra.sdi=cleaned_data.get("sdi", "")
     user_extra.coordinate_bancarie=cleaned_data.get("coordinate_bancarie", "")

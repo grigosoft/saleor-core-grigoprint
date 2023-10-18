@@ -127,7 +127,6 @@ class ClienteCrea(CustomerCreate):
         cleaned_input_extra["is_staff"] = False
         clean_save.clean_user_extra(instance, cleaned_input_extra, data)
         clean_save.clean_assegna_rappresentante(cls, info, instance, cleaned_input_extra)
-        # print("super")
         return cleaned_input
 
     @classmethod

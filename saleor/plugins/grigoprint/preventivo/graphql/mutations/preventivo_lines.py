@@ -60,6 +60,7 @@ class PreventivoLineaAggiungi(CheckoutLinesAdd):
     class Meta:
         description = (
             "aggiunge una linea ad un preventivo esistente"
+            "se il prodotto è personalizzato imposta in automatico 'force_new_line=true'"
             "la linea può avere più linee di prodotti correlati (basi, strutture, ecc)"
             "le linee correlate hanno la stessa quantità del prodotto principale"
         )
@@ -82,12 +83,20 @@ class PreventivoLineaAggiungi(CheckoutLinesAdd):
         )
         if checkout and checkout.user:
             clean_save.controllo_permessi_rappresentante_preventivo(cls, info, checkout.user)
-        clean_save.clean_preventivo_linea(cls, info, checkout, linea, linee_correlate)
-        lines = [linea]
-        if linee_correlate:
-            lines.extend(linee_correlate)
+        #clean_save.clean_preventivo_linea(cls, info, checkout, linea, linee_correlate)
+        # old_lines = checkout.lines
+        # lines = [linea]
+        # if linee_correlate:
+        #     lines.extend(linee_correlate)
+        # for line in lines:
+        #     line["force_new_line"] = True
         # aggiungo le linee con il metodo originale saleor
-        response = super().perform_mutation(_root,info, lines=lines,id=id)
+        # response = super().perform_mutation(_root,info, lines=lines,id=id)
+        # new_lines = response.checkout.lines
+        # linee_create = [line for line in new_lines if line not in old_lines]
+        linee_create = None
+        clean_save.save_preventivo_linea(cls, info, checkout, linee_create, linea, linee_correlate)
+        response = PreventivoLineaAggiungi(checkout=checkout)
         response.preventivo = response.checkout.extra
         return response
 

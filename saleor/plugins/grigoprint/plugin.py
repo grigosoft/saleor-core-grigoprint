@@ -1,6 +1,9 @@
 
-from typing import Any
-from saleor.account.models import User
+from typing import Any, List, Union
+from saleor.account.models import Address, User
+from saleor.checkout.fetch import CheckoutInfo, CheckoutLineInfo
+from saleor.order.models import Order, OrderLine
+from saleor.product.models import Product, ProductVariant
 from .accountExtra.util import controlla_o_crea_userextra
 from ..base_plugin import BasePlugin
 from prices import TaxedMoney
@@ -20,15 +23,38 @@ class GrigoprintPlugin(BasePlugin):
         controlla_o_crea_userextra(staff)
 
     ### calcola prezzi con prodotto personalizzato
-    def calculate_checkout_line_unit_price(checkoutInfo, linesInfo, address, discount, other)->TaxedMoney:
+    def calculate_checkout_line_unit_price(self, 
+            checkoutInfo:"CheckoutInfo", 
+            linesInfo:List["CheckoutLineInfo"], 
+            address:Union["Address", None],
+            other
+        )->TaxedMoney:
         raise Exception("TODO: not implemented yet")
     ### controllo prezzi di linee con padre e figlio
-    def calculate_checkout_line_total(checkoutInfo, linesInfo, address, discount, other)->TaxedMoney:
+    def calculate_checkout_line_total(self, 
+            checkoutInfo:"CheckoutInfo", 
+            linesInfo:List["CheckoutLineInfo"], 
+            address:Union["Address", None],
+            taxed_money:TaxedMoney,
+            other
+        )->TaxedMoney:
         raise Exception("TODO: not implemented yet")
 
     ### calcola prezzi con prodotto personalizzato
-    def calculate_order_line_unit(order, orderLine, productVariant, product, taxedMoney)->TaxedMoney:
+    def calculate_order_line_unit(self,
+            order:"Order", 
+            orderLine:"OrderLine", 
+            productVariant:"ProductVariant", 
+            product:"Product", 
+            taxedMoney:"TaxedMoney"
+        )->TaxedMoney:
         raise Exception("TODO: not implemented yet")
     ### controllo prezzi di linee con padre e figlio
-    def calculate_order_line_total(order, orderLine, productVariant, product, taxedMoney)->TaxedMoney:
+    def calculate_order_line_total(self,
+            order:"Order", 
+            orderLine:"OrderLine", 
+            productVariant:"ProductVariant", 
+            product:"Product", 
+            taxedMoney:"TaxedMoney"
+        )->TaxedMoney:
         raise Exception("TODO: not implemented yet")

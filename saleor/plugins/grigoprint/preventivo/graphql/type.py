@@ -67,7 +67,7 @@ class Preventivo(ModelObjectType[models.Preventivo]):
     def resolve_linee(root: models.Preventivo, _info, **_kwargs):
         checkout_line_ids = [linea.id for linea in root.checkout.lines.all()]
         print(checkout_line_ids)
-        preventivo_linee = models.PreventivoLinea.objects.filter(checkout_line_id__in=root.checkout.lines.all())
+        preventivo_linee = models.PreventivoLinea.objects.all()#filter(checkout_line_id__in=root.checkout.lines.all())
         print(preventivo_linee)
         return preventivo_linee
 
