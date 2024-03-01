@@ -604,13 +604,13 @@ MUTATION_CREA_CLIENTE = """
                 splitPayment:$splitPayment,
                 coordinateBancarie:$coordinateBancarie,
                 idDanea:$idDanea,
-                rappresentanteId:$rappresentanteId,
+                rappresentante:$rappresentanteId,
                 tipoUtente:$tipoUtente,
-                ivaId:$ivaId,
+                iva:$ivaId,
                 porto:$porto,
                 vettore:$vettore,
                 pagamento:$pagamento,
-                listinoId:$listinoId,
+                listino:$listinoId,
                 sconto:$sconto
             }
         }){
@@ -696,13 +696,13 @@ MUTATION_AGGIORNA_CLIENTE = """
                 splitPayment:$splitPayment,
                 coordinateBancarie:$coordinateBancarie,
                 idDanea:$idDanea,
-                rappresentanteId:$rappresentanteId,
+                rappresentante:$rappresentanteId,
                 tipoUtente:$tipoUtente,
-                ivaId:$ivaId,
+                iva:$ivaId,
                 porto:$porto,
                 vettore:$vettore,
                 pagamento:$pagamento,
-                listinoId:$listinoId,
+                listino:$listinoId,
                 sconto:$sconto
             }
         }){
@@ -966,13 +966,13 @@ MUTATION_CREA_STAFF = """
                 splitPayment:$splitPayment,
                 coordinateBancarie:$coordinateBancarie,
                 idDanea:$idDanea,
-                rappresentanteId:$rappresentanteId,
+                rappresentante:$rappresentanteId,
                 tipoUtente:$tipoUtente,
-                ivaId:$ivaId,
+                iva:$ivaId,
                 porto:$porto,
                 vettore:$vettore,
                 pagamento:$pagamento,
-                listinoId:$listinoId,
+                listino:$listinoId,
                 sconto:$sconto
             }
         }){
@@ -1058,13 +1058,13 @@ MUTATION_AGGIORNA_STAFF = """
                 splitPayment:$splitPayment,
                 coordinateBancarie:$coordinateBancarie,
                 idDanea:$idDanea,
-                rappresentanteId:$rappresentanteId,
+                rappresentante:$rappresentanteId,
                 tipoUtente:$tipoUtente,
-                ivaId:$ivaId,
+                iva:$ivaId,
                 porto:$porto,
                 vettore:$vettore,
                 pagamento:$pagamento,
-                listinoId:$listinoId,
+                listino:$listinoId,
                 sconto:$sconto
             }
         }){

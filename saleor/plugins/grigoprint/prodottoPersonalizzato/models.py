@@ -2,7 +2,8 @@ from decimal import Decimal
 from django.db import models
 from django.conf import settings
 
-from saleor.plugins.grigoprint.accountExtra.models import UserExtra
+from saleor.plugins.grigoprint.settore.models import Settore
+from saleor.product.models import ProductVariant
 
 
 # -----------------riferimenti per elenco finiture e stampa (NO SALVATAGGIO PRODOTTI)
@@ -105,7 +106,7 @@ class DatoParticolare(models.Model):
 #     nome = models.CharField()
 
     
-# ---------------- SALVATAGGIO PRODOTTI
+# ---------------- SALVATAGGIO PERSONALIZZAZIONI
 
 class ProdottoPersonalizzato(models.Model):
     variante = models.ForeignKey(
@@ -164,3 +165,12 @@ class Finitura(models.Model):
     #     related_name="+",
     #     on_delete=models.SET_NULL
     # )
+
+# ESTENSIONE PRODUCT_VARIANT
+class ProdottoExtra(models.Model):
+
+    variant = models.OneToOneField(ProductVariant, on_delete=models.CASCADE, related_name="extra", primary_key=True)
+
+    is_personalizzabile = models.BooleanField(default=False)
+    stati_lavorazione = models.ManyToManyField(Settore, verbose_name="Prodotti")
+    # vedere se possibile aggiungere campo per priorità,k

@@ -192,7 +192,7 @@ MUTATION_CREA_CLIENTE = """
             email:$email,
             extra:{
                 denominazione:$denominazione,
-                rappresentanteId:$rappresentanteId,
+                rappresentante:$rappresentanteId,
                 piva:$piva
             }
         }){
@@ -221,7 +221,7 @@ MUTATION_AGGIORNA_CLIENTE = """
     mutation clienteAggiorna (
         $id:ID!
         $denominazione:String!,
-        $rappresentanteId:ID
+        $rappresentante:ID
         
     ){
         clienteAggiorna(
@@ -359,6 +359,67 @@ def test_mutantion_crea_cliente_rappresentante(
     # check permissions
     response = user_api_client.post_graphql(MUTATION_CREA_CLIENTE, variables)
     assert_no_permission(response)
+
+# MUTATION_ASSEGNA_RAPPRESENTANTE = """
+#     mutation assegnaRappresentanteACliente (
+#         $id:ID!,
+#         $rappresentanteId:ID
+        
+#     ){
+#         assegnaRappresentanteACliente(
+#         id:$id
+#         input:{
+#             rappresentante:$rappresentanteId
+#         }){
+#             errors{
+#                 field
+#                 message
+#             }
+#             user{
+#                 id
+#                 email
+#                 isStaff
+#             }
+#             userExtra{
+#                 id
+#                 email
+#                 denominazione
+#                 rappresentante{
+#                     id
+#                     email
+#                 }
+#             }
+#         }
+#     }
+# """
+# def test_assegna_rappresentante_a_cliente(
+#     staff_api_client,
+#     user_api_client,
+#     staff_user,
+#     customer_user,
+#     permission_manage_users,
+#     # permission_manage_rappresentanti
+# ):
+#     staff_api_client.user.user_permissions.add(
+#         permission_manage_users
+#     )
+#     # CREATE -------
+
+#     # creo rappresentanti
+#     cliente = UserExtra.objects.create(user=customer_user, denominazione="nome user")
+#     cliente_id = graphene.Node.to_global_id("User", cliente.user.pk)
+#     rappresentante = UserExtra.objects.create(user=staff_user, is_rappresentante=True, denominazione="nome rappresentante")
+#     rappresentante_id = graphene.Node.to_global_id("User", rappresentante.user.pk)
+
+#     variables = {
+#                     "id":cliente_id,
+#                     "rappresentanteId":rappresentante_id
+#                 }
+#     response = staff_api_client.post_graphql(MUTATION_ASSEGNA_RAPPRESENTANTE, variables)
+#     content = get_graphql_content(response)
+#     data = content["data"]["assegnaRappresentanteACliente"]["userExtra"]
+#     assert content["data"]["assegnaRappresentanteACliente"]["errors"] == []
+#     assert data["rappresentante"]["email"] == staff_user.email
 
 
 

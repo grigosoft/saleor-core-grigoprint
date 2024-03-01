@@ -54,17 +54,15 @@ def create_staff_user(staff_password, data, superuser=True):
     # asegno permessi
     
     return user
-def create_group(name, permissions, users):
+def create_group(name, permissions):
     group, _ = Group.objects.get_or_create(name=name)
     group.permissions.add(*permissions)
-    group.user_set.add(*users)
+    # group.user_set.add(*users)
     return group
 def create_permission_groups(staff_password):
-    super_users = [create_staff_user(staff_password,user, True) for user in SUPER_USERS]
-    group = create_group("Full Access", get_permissions(), super_users)
+    group = create_group("Full Access", get_permissions())
     yield f"Group: {group}"
 
-    staff_users = [create_staff_user(staff_password,user, True) for user in STAFF_USERS]
     customer_support_codenames = [
         perm.codename
         for enum in [CheckoutPermissions, OrderPermissions, GiftcardPermissions]
@@ -74,17 +72,11 @@ def create_permission_groups(staff_password):
     customer_support_permissions = Permission.objects.filter(
         codename__in=customer_support_codenames
     )
-    group = create_group("Servizio Clienti", customer_support_permissions, staff_users)
+    group = create_group("Servizio Clienti", customer_support_permissions)
     yield f"Group: {group}"
-    rapp_users = [create_staff_user(staff_password,user, True) for user in RAPP_USERS]
     
-    rappresentanti_codenames = [
-        GrigoprintPermissions.IS_RAPPRESENTANTE.codename
-    ]
-    rappresentanti_permissions = Permission.objects.filter(
-        codename__in=rappresentanti_codenames
-    )
-    group = create_group("Rappresentanti", rappresentanti_permissions, rapp_users)
+    
+    group = create_group("Rappresentanti", customer_support_permissions)
     yield f"Group: {group}"
 
 def create_channel(channel_name, currency_code, slug=None, country=None):
@@ -198,3 +190,36 @@ def create_warehouse():
         )
         warehouse.shipping_zones.add(shipping_zone)
         warehouse.channels.add(*channels)
+
+def create_stato(stato, stato_precedente):
+    pass
+def create_settori():
+    data = {
+        "preventivo":[
+            "richiesto","inviato", "confermato"
+        ],
+        "grafica_bozza":[ # settore a parte
+            "non_richiesta", "richiesta", "realizzata", "inviata", "confermata"
+        ],
+        "stampa":[
+            "non_richiesta", "richiesta","file_pronto", "stampato", "trasferito"
+        ],
+        "cucitura":[
+            "non_richiesta", "richiesta","tagliato", "confezionato"
+        ],
+        "fatturazione":[
+            "contabilizzato", "creata_spedizione"
+        ],
+        "magazzino":[
+            "imballato", "etichettato", "spedito"
+        ]
+
+    }
+    for settore in data:
+        stato_precedente = None
+        for stato in data[settore]:
+            create_stato(stato, stato_precedente)
+            stato_precedente = stato
+
+def create_products():
+    pass

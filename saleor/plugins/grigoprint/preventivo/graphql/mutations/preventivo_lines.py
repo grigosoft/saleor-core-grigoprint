@@ -11,6 +11,7 @@ from saleor.graphql.core.scalars import PositiveDecimal
 from saleor.graphql.core.types.base import BaseInputObjectType
 from saleor.graphql.core.types.common import CheckoutError, NonNullList
 from saleor.permission.enums import CheckoutPermissions
+from saleor.plugins.grigoprint.graphql_util import ModelExtraMutation
 
 from ... import models
 from .. import type

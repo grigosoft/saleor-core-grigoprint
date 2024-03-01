@@ -22,8 +22,6 @@ def controllo_permessi_rappresentante_preventivo(cls, info: ResolveInfo, cliente
 def clean_preventivo(cls, info: ResolveInfo, instance, cleaned_input, data):
     user = cleaned_input["extra"].get("user",None)
     if user:
-        user = cls.get_node_or_error(info, user, only_type=User)
-        cleaned_input["extra"]["user"] = user
         cleaned_input["email"] = user.email
     
 

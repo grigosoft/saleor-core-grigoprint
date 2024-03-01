@@ -4,7 +4,7 @@ from saleor.core.exceptions import PermissionDenied
 from saleor.graphql.core.fields import PermissionsField
 from saleor.graphql.core.types.common import NonNullList
 
-from saleor.permission.enums import AccountPermissions, GrigoprintPermissions
+from saleor.permission.enums import AccountPermissions
 
 from ...graphql_util import get_user_extra_or_None
 

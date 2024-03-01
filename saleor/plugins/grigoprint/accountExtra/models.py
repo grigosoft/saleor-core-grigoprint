@@ -4,6 +4,7 @@ from django.db.models import Q, Exists, OuterRef, UniqueConstraint
 from typing import Union
 
 from saleor.order.models import Order
+from saleor.plugins.grigoprint.settore.models import Settore
 
 from ....account.models import PossiblePhoneNumberField, User, UserManager
 
@@ -45,25 +46,22 @@ class UserExtraManager(models.Manager["UserExtra"]):
         return clienti
 
 class UserExtra(models.Model):
+    # collegamento all'oggetto da estendere
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="extra", primary_key=True)
-    objects = UserExtraManager() # "userManager"
+    #manager
+    objects = UserExtraManager()
     
-    denominazione = models.TextField(null=True, blank=True)
-    id_danea = models.TextField(null=True, blank=True, unique=True)
-    tipo_utente = models.CharField(max_length=9,
-                  choices=TipoUtente.CHOICES,
-                  default=TipoUtente.AZIENDA)
+    # PARTE ADMIN
+    settori = models.ForeignKey(Settore, on_delete=models.SET_NULL, null=True, blank=True)
 
-    # tel = PossiblePhoneNumberField(null=True,blank=True, default="", db_index=True)
-    # cell = PossiblePhoneNumberField(null=True,blank=True, default="", db_index=True)
-    # TODO contatto_default = models.ForeignKey(Contatto, related_name="-", , null=True, blank=True, on_delete=models.SET_NULL)
-
-    #is_no_login = models.BooleanField(default=False) # sostituito per 
     #rappresentante
     is_rappresentante = models.BooleanField(default=False,null=False)
     rappresentante = models.ForeignKey(User, related_name="clienti", null=True,blank=True, on_delete=models.SET_NULL)
     #nome_rappresentante = models.CharField(max_length=256, blank=True) # nel caso si cancellasse il riferimento esterno al rappresentante
     commissione = models.FloatField(default=0,null=False, blank=True)
+    
+    # TODO contatto_default = models.ForeignKey(Contatto, related_name="-", , null=True, blank=True, on_delete=models.SET_NULL)
+    
     # dati azienda
     piva = models.TextField(null=True, blank=True, unique=True, default=None)
     cf = models.TextField(null=True, blank=True, unique=True)
@@ -72,8 +70,13 @@ class UserExtra(models.Model):
     #Pubblica amministrazione
     rif_ammin = models.TextField(null=True, blank=True)
     split_payment = models.BooleanField(default=False)
-
-    iva = models.ForeignKey(Iva, null=True,blank=True, on_delete=models.SET_NULL)
+    # dati comuni
+    denominazione = models.TextField(null=True, blank=True)
+    id_danea = models.TextField(null=True, blank=True, unique=True) # TODO si potrebbe utilizzare "external reference"
+    tipo_utente = models.CharField(max_length=9,
+                  choices=TipoUtente.CHOICES,
+                  default=TipoUtente.AZIENDA)
+    iva = models.ForeignKey(Iva, null=True,blank=True, on_delete=models.SET_NULL) #FIXME usare lore sistema "tax"
     porto = models.CharField(null=True, blank=True, max_length=3,
                   choices=TipoPorto.CHOICES,
                   default=TipoPorto.FRANCO_CON_ADDEBITO)

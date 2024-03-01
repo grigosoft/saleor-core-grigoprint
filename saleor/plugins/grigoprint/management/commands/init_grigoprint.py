@@ -20,7 +20,9 @@ from .init_data_util import (
     # create_pages,
     create_permission_groups,
     create_product_sales,
+    create_products,
     create_products_by_schema,
+    create_settori,
     create_shipping_zones,
     create_tax_classes,
     # create_vouchers,
@@ -110,29 +112,21 @@ class Command(BaseCommand):
         #     self.stdout.write(msg)
         # for msg in create_pages():
         #     self.stdout.write(msg)
-        create_products_by_schema(self.placeholders_dir, create_images)
-        self.stdout.write("Created products")
+        # create_products_by_schema(self.placeholders_dir, create_images)
+        # self.stdout.write("Created products")
         
-        if not production:
+        # if not production:
             # for msg in create_product_sales(2):
             #     self.stdout.write(msg)
             # for msg in create_vouchers():
             #     self.stdout.write(msg)
-            for msg in create_users(user_password):
-                self.stdout.write(msg)
-            for msg in create_orders(20):
-                self.stdout.write(msg)
-            for msg in create_gift_cards():
-                self.stdout.write(msg)
+            # for msg in create_users(user_password):
+            #     self.stdout.write(msg)
+            # for msg in create_gift_cards():
+            #     self.stdout.write(msg)
         # for msg in create_menus():
         #     self.stdout.write(msg)
-        # for msg in create_checkout_with_preorders():
-        #     self.stdout.write(msg)
-        # for msg in create_checkout_with_custom_prices():
-        #     self.stdout.write(msg)
-        for msg in create_tax_classes():
-            self.stdout.write(msg)
-        # for msg in create_checkout_with_same_variant_in_multiple_lines():
+        # for msg in create_tax_classes():
         #     self.stdout.write(msg)
 
         if options["createsuperuser"]:
@@ -151,3 +145,9 @@ class Command(BaseCommand):
         if not production:
             for msg in create_staffs(staff_password):
                 self.stdout.write(msg)
+
+        # crea prodotti nostri
+        create_settori()
+        self.stdout.write("Created settori e sati")
+        create_products()
+        self.stdout.write("Created prodotti")

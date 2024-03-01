@@ -13,6 +13,7 @@ from saleor.graphql.app.dataloaders import get_app_promise
 from saleor.graphql.core import ResolveInfo
 
 from saleor.graphql.core.types.common import NonNullList, StaffError
+from saleor.graphql.plugins.dataloaders import get_plugin_manager_promise
 from saleor.plugins.grigoprint.accountExtra.enum import TipoUtente
 
 from saleor.graphql.core.mutations import BaseMutation, ModelMutation
@@ -38,14 +39,16 @@ from saleor.graphql.account.mutations.base import (
     SHIPPING_ADDRESS_FIELD,
     BILLING_ADDRESS_FIELD,
     CustomerInput,
+    UserAddressInput,
     UserCreateInput,
     UserInput,
 )
 from django.core.exceptions import ValidationError
 from saleor.plugins.grigoprint.accountExtra.graphql.util import accerta_user_extra_or_error
 from saleor.plugins.grigoprint.accountExtra.util import controlla_o_crea_userextra
-
+from saleor.plugins.grigoprint.graphql_util import ModelExtraMutation
 from saleor.plugins.grigoprint.permissions import GrigoprintPermissions
+
 
 from .contatto import ContattoInput
 
@@ -58,43 +61,44 @@ from .user import AccountExtraBaseInput
 
 
 class AssegnaRappresentanteInput(graphene.InputObjectType):
-    rappresentante_id = graphene.ID(description="Id del Rappresentante assegnato a questo utente/cliente")
+    rappresentante = graphene.ID(description="Id del Rappresentante assegnato a questo utente/cliente")
 
-class AssegnaRappresentante(BaseMutation):
-    """Assegna rappresentante ad un utente"""
-
-    class Arguments:
-        id = graphene.ID(description="Id Utente da aggiornare")
-        input = AssegnaRappresentanteInput(
-            description="Fields necessari da assegnare un rappresentante.", required=True
-        )
-    class Meta:
-        description = "Assegna rappresentante ad un utente"
-        permissions = (AccountPermissions.MANAGE_USERS,)
-        error_type_class = AccountError
-        error_type_field = "account_errors"
-    @classmethod
-    def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
-        cleaned_input = super().clean_input(info, instance, data, **kwargs)
-        accerta_user_extra_or_error(instance)
-        # controllo se l'ID è di un rappresentante
-        clean_save.clean_assegna_rappresentante(cls,info,instance,cleaned_input)
-        return cleaned_input
-    @classmethod
-    def save(cls, info: ResolveInfo, instance, cleaned_data):
-        with traced_atomic_transaction():
-            # salvo le informazioni in userExtra
-            clean_save.save_assegna_rappresentante(instance, cleaned_data)
+# class AssegnaRappresentante(BaseMutation):
+#     """Assegna rappresentante ad un utente"""
+#     user_extra = graphene.Field(
+#         type.UserExtra, description="A userExtra instance"
+#     )
+#     class Arguments:
+#         id = graphene.ID(description="Id Utente da aggiornare")
+#         input = AssegnaRappresentanteInput(
+#             description="Fields necessari per assegnare un rappresentante.", required=True
+#         )
+#     class Meta:
+#         description = "Assegna rappresentante ad un utente"
+#         permissions = (AccountPermissions.MANAGE_USERS,)
+#         error_type_class = AccountError
+#         error_type_field = "account_errors"
+#     @classmethod
+#     def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
+#         cleaned_input = ModelMutation.clean_input(info, instance, data, **kwargs)
+#         accerta_user_extra_or_error(instance)
+#         # controllo se l'ID è di un rappresentante
+#         clean_save.clean_assegna_rappresentante(cls,info,instance,cleaned_input)
+#         return cleaned_input
+#     @classmethod
+#     def save(cls, info: ResolveInfo, instance, cleaned_data):
+#         # salvo le informazioni in userExtra
+#         clean_save.save_assegna_rappresentante(instance, cleaned_data)
     
 class ClienteExtraInput(AssegnaRappresentanteInput, AccountExtraBaseInput):
     id_danea = graphene.String()
     tipo_utente = type.TipoUtenteEnum()
     
-    iva_id = graphene.ID(description="id dell'aliquta iva di questo cliente")
+    iva = graphene.ID(description="id dell'aliquta iva di questo cliente")
     porto = type.TipoPortoEnum()
     vettore = type.TipoVettoreEnum()
     pagamento = graphene.String()
-    listino_id = graphene.ID(description="id del listino assegnato a questo cliente")
+    listino = graphene.ID(description="id del listino assegnato a questo cliente")
     sconto = graphene.Float()
 
     # aggiungi_contatti = NonNullList(ContattoInput, description="Contatti da aggiungere al cliente")
@@ -102,7 +106,7 @@ class ClienteExtraInput(AssegnaRappresentanteInput, AccountExtraBaseInput):
 class ClienteInput(CustomerInput):
     extra = ClienteExtraInput(required=True, description="Campi per informazioni aggiuntive")
 
-class ClienteCrea(CustomerCreate):
+class ClienteCrea(CustomerCreate, ModelExtraMutation):
     user_extra = graphene.Field(
         type.UserExtra, description="A userExtra instance"
     )
@@ -123,7 +127,8 @@ class ClienteCrea(CustomerCreate):
     @classmethod
     def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
         cleaned_input = super().clean_input(info, instance, data, **kwargs)
-        cleaned_input_extra = cleaned_input["extra"]
+        cleaned_input_extra = cls.clean_input_extra(info, data)
+        cleaned_input["extra"] = cleaned_input_extra
         cleaned_input_extra["is_staff"] = False
         clean_save.clean_user_extra(instance, cleaned_input_extra, data)
         clean_save.clean_assegna_rappresentante(cls, info, instance, cleaned_input_extra)
@@ -134,7 +139,7 @@ class ClienteCrea(CustomerCreate):
     def save(cls, info: ResolveInfo, instance, cleaned_input):
         super().save(info, instance, cleaned_input)
         cleaned_input_extra = cleaned_input["extra"]
-        controlla_o_crea_userextra(instance)
+        instance_extra = controlla_o_crea_userextra(instance)
         # salvo le informazioni in userExtra
         clean_save.save_user_extra(instance, cleaned_input_extra)
         clean_save.save_assegna_rappresentante(instance, cleaned_input_extra)
@@ -145,7 +150,7 @@ class ClienteCrea(CustomerCreate):
         response.user_extra = response.user.extra
         return response
 
-class ClienteAggiorna(CustomerUpdate):
+class ClienteAggiorna(CustomerUpdate, ModelExtraMutation):
     user_extra = graphene.Field(
         type.UserExtra, description="A userExtra instance"
     )
@@ -158,7 +163,7 @@ class ClienteAggiorna(CustomerUpdate):
         model = models.User
         object_type = type.User
         description = "Updates an existing customer."
-        exclude = ["password","is_rappresentante","commissione"]
+        exclude = ["password","is_rappresentante","commissione","is_staff"]
         permissions = (AccountPermissions.MANAGE_USERS,)
         error_type_class = AccountError
         error_type_field = "account_errors"
@@ -166,8 +171,8 @@ class ClienteAggiorna(CustomerUpdate):
     @classmethod
     def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
         cleaned_input = super().clean_input(info, instance, data, **kwargs)
-        cleaned_input_extra = cleaned_input["extra"]
-        cleaned_input_extra["is_staff"] = False
+        cleaned_input_extra = cls.clean_input_extra(info, data)
+        cleaned_input["extra"] = cleaned_input_extra
         clean_save.clean_user_extra(instance, cleaned_input_extra, data)
         clean_save.clean_assegna_rappresentante(cls, info, instance, cleaned_input_extra)
         # print("super")
@@ -196,9 +201,12 @@ class StaffExtraRappresentanteInput(ClienteExtraInput):
     commissione = graphene.Float()
 
 class StaffExtraInput(StaffCreateInput):
+    default_billing_address = AddressInput(
+        description="Billing address of the customer."
+    )
     extra = StaffExtraRappresentanteInput()
 
-class StaffCrea(StaffCreate):
+class StaffCrea(StaffCreate, ModelExtraMutation):
     user_extra = graphene.Field(
         type.UserExtra, description="A userExtra instance"
     )
@@ -222,8 +230,25 @@ class StaffCrea(StaffCreate):
     @classmethod
     def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
         data.pop("rappresentante_id",None) # ignoro questo input
+        billing_address_data = data.pop(BILLING_ADDRESS_FIELD, None)
+
         cleaned_input = super().clean_input(info, instance, data, **kwargs)
-        cleaned_input_extra = cleaned_input["extra"]
+
+        # Copiato da BaseCustomerCreate
+        if billing_address_data:
+            address_metadata = billing_address_data.pop("metadata", list())
+            billing_address = cls.validate_address(
+                billing_address_data,
+                address_type=AddressType.BILLING,
+                instance=getattr(instance, BILLING_ADDRESS_FIELD),
+                info=info,
+            )
+            cls.update_metadata(billing_address, address_metadata)
+            cleaned_input[BILLING_ADDRESS_FIELD] = billing_address
+
+        # mio
+        cleaned_input_extra = cls.clean_input_extra(info, data)
+        cleaned_input["extra"] = cleaned_input_extra
         cleaned_input_extra["is_staff"] = True
         clean_save.clean_user_extra(instance, cleaned_input_extra, data)
         # clean_save.clean_assegna_rappresentante(cls, info, instance, cleaned_input_extra)
@@ -235,6 +260,21 @@ class StaffCrea(StaffCreate):
     @traced_atomic_transaction()
     def save(cls, info: ResolveInfo, user, cleaned_input, send_notification=True):
         super().save(info, user, cleaned_input, send_notification)
+        # Copiato da BaseCustomerCreate
+        manager = get_plugin_manager_promise(info.context).get()
+        default_billing_address = cleaned_input.get(BILLING_ADDRESS_FIELD)
+        if default_billing_address:
+            default_billing_address = manager.change_user_address(
+                default_billing_address, "billing", user
+            )
+            default_billing_address.save()
+            user.default_billing_address = default_billing_address
+
+        super().save(info, user, cleaned_input)
+        if default_billing_address:
+            user.addresses.add(default_billing_address)
+
+
         cleaned_input_extra = cleaned_input["extra"]
         controlla_o_crea_userextra(user)
         # salvo le informazioni in userExtra
@@ -248,7 +288,7 @@ class StaffCrea(StaffCreate):
         response.user_extra = response.user.extra
         return response
 
-class StaffAggiorna(StaffUpdate):
+class StaffAggiorna(StaffUpdate, ModelExtraMutation):
     user_extra = graphene.Field(
         type.UserExtra, description="A userExtra instance"
     )
@@ -261,7 +301,7 @@ class StaffAggiorna(StaffUpdate):
         model = models.User
         object_type = type.User
         description = "Updates an existing STAFF."
-        exclude = ["password"]
+        exclude = ["password","is_staff"]
         permissions = (AccountPermissions.MANAGE_USERS,)
         error_type_class = AccountError
         error_type_field = "account_errors"
@@ -270,8 +310,8 @@ class StaffAggiorna(StaffUpdate):
     def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
         data.pop("rappresentante_id",None) # ignoro questo input
         cleaned_input = super().clean_input(info, instance, data, **kwargs)
-        cleaned_input_extra = cleaned_input["extra"]
-        cleaned_input_extra["is_staff"] = True
+        cleaned_input_extra = cls.clean_input_extra(info, data)
+        cleaned_input["extra"] = cleaned_input_extra
         clean_save.clean_user_extra(instance, cleaned_input_extra, data)
         # clean_save.clean_assegna_rappresentante(cls, info, instance, cleaned_input_extra)
         clean_save.clean_is_rappresentante(instance, cleaned_input_extra,data)

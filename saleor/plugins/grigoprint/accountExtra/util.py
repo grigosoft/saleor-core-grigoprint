@@ -13,13 +13,14 @@ def is_user_extra(user:Optional[User]) -> bool:
     except UserExtra.DoesNotExist or User.DoesNotExist:
         return False
         
-def controlla_o_crea_userextra(user: "User"):
+def controlla_o_crea_userextra(user: "User")->"UserExtra":
     if not is_user_extra(user):
         print("creato un user senza extra, lo aggiungo")
         userExtra = UserExtra.objects.create(user=user)
         userExtra.save()
-        user.extra = userExtra # type: ignore #TODO serve??
-        user.save()
+        # user.extra = userExtra # type: ignore #TODO serve??
+        # user.save()
+    return user.extra # type: ignore
 
 def is_rappresentante(user:Optional[User]) -> bool:
     return is_user_extra(user) and user.extra.is_rappresentante # type: ignore

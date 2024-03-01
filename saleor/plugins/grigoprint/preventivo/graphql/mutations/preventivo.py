@@ -7,6 +7,7 @@ from saleor.graphql.core import ResolveInfo
 from saleor.graphql.core.mutations import ModelDeleteMutation, ModelMutation
 from saleor.graphql.core.types.common import CheckoutError, NonNullList
 from saleor.permission.enums import CheckoutPermissions
+from saleor.plugins.grigoprint.graphql_util import ModelExtraMutation
 
 from . import clean_save
 from .. import type
@@ -20,7 +21,7 @@ class PreventivoInput(PreventivoStatoInput):
     user = graphene.ID(description="id del cliente associato al Preventivo/checkout.")
     
 class PreventivoCreaInput(CheckoutCreateInput):
-    extra = graphene.Field(PreventivoInput)
+    extra = PreventivoInput()
     lines = NonNullList( # Solo per required=False
         CheckoutLineInput,
         description=(
@@ -29,7 +30,7 @@ class PreventivoCreaInput(CheckoutCreateInput):
         required=False,
     )
 
-class PreventivoCrea(CheckoutCreate):
+class PreventivoCrea(CheckoutCreate, ModelExtraMutation):
     preventivo  = graphene.Field(
         type.Preventivo, description="Instance: Preventivo"
     )
@@ -49,6 +50,7 @@ class PreventivoCrea(CheckoutCreate):
     @classmethod
     def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
         cleaned_input = super().clean_input(info, instance, data, **kwargs)
+        cleaned_input["extra"] = cls.clean_input_extra(info, data)
         # controllo che la mail non sia settata
         # DEVE essere associato un cliente
         # no line input?

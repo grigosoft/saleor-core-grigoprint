@@ -8,7 +8,7 @@ from saleor.permission.utils import has_one_of_permissions
 
 from .....graphql.core import ResolveInfo
 from .....core.exceptions import PermissionDenied
-from .....permission.enums import AccountPermissions, OrderPermissions, GrigoprintPermissions
+from .....permission.enums import AccountPermissions, OrderPermissions
 from .....graphql.core.tracing import traced_resolver
 from .....graphql.core.utils import from_global_id_or_error
 from .....graphql.core.fields import FilterConnectionField, PermissionsField

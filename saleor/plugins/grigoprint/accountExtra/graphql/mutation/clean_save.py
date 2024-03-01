@@ -48,11 +48,11 @@ def clean_assegna_rappresentante(cls, info, user:"User", cleaned_input):
     + se il requestor è rappresentante, può assegnare solo se stesso
     + se il requestor ha il permesso di gestire i rappresentanti: manage_rappresentanti
     """
-    rappresentante_id = cleaned_input.get("rappresentante_id", None)
-    if rappresentante_id:
+    rappresentante = cleaned_input.get("rappresentante", None)
+    if rappresentante:
         requestor = info.context.user
         if requestor:
-            rappresentante = cls.get_node_or_error(info, rappresentante_id, only_type=User)
+            # rappresentante = cls.get_node_or_error(info, rappresentante_id, only_type=User)
             accerta_rappresentante_or_error(rappresentante)
             if (
                 (requestor.extra.is_rappresentante and requestor.id == rappresentante.id) or 
@@ -83,7 +83,7 @@ def save_assegna_rappresentante(user:"User", cleaned_data):
     rappresentante = cleaned_data.get("rappresentante", None)
     if rappresentante:
         user.extra.rappresentante = rappresentante
-        user.extra.save()#only_fields=["rappresentante"])
+        user.extra.save(update_fields=["rappresentante"])
 
 def save_user_extra_base(user:"User", cleaned_data):
     """crea le informazioni base dell'UserExtra"""
@@ -136,14 +136,15 @@ def clean_user_extra(user:"User", cleaned_input_extra, data):
     # last_name = cleaned_input.get("last_name")
     # if last_name:
     #     cleaned_input["last_name"] = util.str_strip_title(last_name)
-    listino_id = cleaned_input_extra.get("listino_id", None)
-    if listino_id:
-        _model, listino_id = from_global_id_or_error(listino_id, type.Listino)
-        cleaned_input_extra["listino"] = models.Listino.objects.filter(pk=listino_id).first()
-    iva_id = cleaned_input_extra.get("iva_id", None)
-    if iva_id:
-        _model, iva_id = from_global_id_or_error(iva_id, type.Iva)
-        cleaned_input_extra["iva"] = models.Iva.objects.filter(pk=iva_id).first()
+
+    # listino_id = cleaned_input_extra.get("listino_id", None)
+    # if listino_id:
+    #     _model, listino_id = from_global_id_or_error(listino_id, type.Listino)
+    #     cleaned_input_extra["listino"] = models.Listino.objects.filter(pk=listino_id).first()
+    # iva_id = cleaned_input_extra.get("iva_id", None)
+    # if iva_id:
+    #     _model, iva_id = from_global_id_or_error(iva_id, type.Iva)
+    #     cleaned_input_extra["iva"] = models.Iva.objects.filter(pk=iva_id).first()
 
     # TODO aggiunta automatica al gruppo permessi dei rappresentanti
     # is_rappresentante = cleaned_input.get("is_rappresentante")

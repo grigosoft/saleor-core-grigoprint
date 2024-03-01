@@ -261,6 +261,7 @@ INSTALLED_APPS = [
     "saleor.plugins.grigoprint.accountExtra",
     "saleor.plugins.grigoprint.prodottoPersonalizzato",
     "saleor.plugins.grigoprint.preventivo",
+    "saleor.plugins.grigoprint.settore",
 ]
 
 ENABLE_DJANGO_EXTENSIONS = get_bool_from_env("ENABLE_DJANGO_EXTENSIONS", False)
